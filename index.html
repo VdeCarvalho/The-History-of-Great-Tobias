@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docinhos da Sorte</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #111;
+      color: #fff;
+    }
+    .game {
+      width: min(92vw, 520px);
+      text-align: center;
+      padding: 32px 24px;
+      border-radius: 22px;
+      background: #1b1b1b;
+      box-shadow: 0 18px 60px rgba(0,0,0,.45);
+    }
+    h1 { margin: 0 0 18px; font-size: 2rem; }
+    .candies { font-size: 1.35rem; margin-bottom: 24px; font-weight: bold; }
+    #rollButton {
+      width: 100%;
+      border: 0;
+      border-radius: 16px;
+      padding: 18px 22px;
+      font-size: 1.2rem;
+      font-weight: 800;
+      cursor: pointer;
+      background: #fff;
+      color: #111;
+    }
+    #rollButton:active { transform: scale(.98); }
+    .result {
+      min-height: 205px;
+      margin-top: 24px;
+      padding: 28px 18px;
+      border-radius: 18px;
+      background: #252525;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+      border: 2px solid transparent;
+      transition: .2s ease;
+    }
+    .icon { font-size: 3rem; line-height: 1; }
+    .rarity { font-size: 1.65rem; font-weight: 900; }
+    .reward { font-size: 1.25rem; font-weight: 700; }
+    .message { opacity: .86; line-height: 1.4; }
+    .best { margin-top: 22px; font-size: .98rem; opacity: .82; }
+
+    .common { border-color: #999; }
+    .uncommon { border-color: #45c96b; box-shadow: 0 0 24px rgba(69,201,107,.22); }
+    .rare { border-color: #4388ff; box-shadow: 0 0 26px rgba(67,136,255,.28); }
+    .epic { border-color: #b24cff; box-shadow: 0 0 28px rgba(178,76,255,.32); }
+    .legendary { border-color: #f7c843; box-shadow: 0 0 32px rgba(247,200,67,.38); }
+    .unique { border-color: #ff3b3b; box-shadow: 0 0 34px rgba(255,59,59,.50); }
+    .infernal {
+      border-color: #050505;
+      background: #080808;
+      box-shadow: 0 0 12px #000, 0 0 36px rgba(0,0,0,.95);
+    }
+    .divine {
+      border-color: #fff;
+      background: #333;
+      box-shadow: 0 0 14px #fff, 0 0 40px rgba(255,255,255,.80);
+    }
+    .nothing {
+      border-color: #6f6f6f;
+      background: #151515;
+      box-shadow: 0 0 28px rgba(255,255,255,.08);
+    }
+
+    .shop-button {
+      display: inline-block;
+      margin-top: 18px;
+      padding: 14px 22px;
+      border: 2px solid #fff;
+      border-radius: 12px;
+      background: #111;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 800;
+      letter-spacing: .3px;
+      transition: .15s ease;
+    }
+    .shop-button:hover {
+      background: #fff;
+      color: #111;
+      transform: translateY(-1px);
+    }
+
+
+    .auto-panel {
+      display: none;
+      margin-top: 14px;
+      padding: 14px;
+      border: 2px solid #777;
+      border-radius: 12px;
+      background: #151515;
+    }
+    .auto-panel.visible { display: block; }
+    .auto-label {
+      font-size: .9rem;
+      opacity: .8;
+      margin-bottom: 9px;
+    }
+    .auto-toggle {
+      width: 100%;
+      border: 2px solid #fff;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-weight: 900;
+      cursor: pointer;
+      background: #111;
+      color: #fff;
+    }
+    .auto-toggle.on {
+      background: #fff;
+      color: #111;
+    }
+
+
+    .dancer {
+      position: fixed;
+      left: 7vw;
+      bottom: 7vh;
+      width: 90px;
+      height: 150px;
+      opacity: .23;
+      pointer-events: none;
+      z-index: 0;
+      animation: dancerBounce .55s ease-in-out infinite alternate;
+      transform-origin: bottom center;
+    }
+
+    .dancer-head {
+      position: absolute;
+      width: 42px;
+      height: 42px;
+      border: 5px solid #fff;
+      border-radius: 50%;
+      left: 24px;
+      top: 0;
+      background: #111;
+    }
+
+    .dancer-body {
+      position: absolute;
+      width: 8px;
+      height: 58px;
+      background: #fff;
+      left: 41px;
+      top: 43px;
+      border-radius: 8px;
+    }
+
+    .dancer-arm,
+    .dancer-leg {
+      position: absolute;
+      width: 7px;
+      background: #fff;
+      border-radius: 8px;
+      transform-origin: top center;
+    }
+
+    .dancer-arm {
+      height: 54px;
+      top: 54px;
+    }
+
+    .dancer-arm.left {
+      left: 40px;
+      animation: armLeft .65s ease-in-out infinite alternate;
+    }
+
+    .dancer-arm.right {
+      left: 44px;
+      animation: armRight .65s ease-in-out infinite alternate;
+    }
+
+    .dancer-leg {
+      height: 56px;
+      top: 96px;
+    }
+
+    .dancer-leg.left {
+      left: 41px;
+      animation: legLeft .55s ease-in-out infinite alternate;
+    }
+
+    .dancer-leg.right {
+      left: 44px;
+      animation: legRight .55s ease-in-out infinite alternate;
+    }
+
+    @keyframes dancerBounce {
+      from { transform: translateY(0) rotate(-4deg); }
+      to   { transform: translateY(-10px) rotate(4deg); }
+    }
+
+    @keyframes armLeft {
+      from { transform: rotate(55deg); }
+      to   { transform: rotate(125deg); }
+    }
+
+    @keyframes armRight {
+      from { transform: rotate(-55deg); }
+      to   { transform: rotate(-125deg); }
+    }
+
+    @keyframes legLeft {
+      from { transform: rotate(18deg); }
+      to   { transform: rotate(-18deg); }
+    }
+
+    @keyframes legRight {
+      from { transform: rotate(-18deg); }
+      to   { transform: rotate(18deg); }
+    }
+
+    .game { position: relative; z-index: 1; }
+
+    @media (max-width: 700px) {
+      .dancer {
+        left: 2vw;
+        bottom: 3vh;
+        transform: scale(.72);
+        opacity: .16;
+      }
+    }
+
+
+    .dancer-speech {
+      position: fixed;
+      left: calc(7vw + 92px);
+      bottom: calc(7vh + 95px);
+      max-width: 235px;
+      padding: 11px 13px;
+      border: 2px solid #fff;
+      border-radius: 12px;
+      background: #111;
+      color: #fff;
+      font-size: .9rem;
+      font-weight: 800;
+      line-height: 1.25;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity .18s ease, transform .18s ease;
+      z-index: 3;
+      pointer-events: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    }
+
+    .dancer-speech.visible {
+      opacity: .96;
+      transform: translateY(0);
+    }
+
+    .dancer-speech::after {
+      content: "";
+      position: absolute;
+      left: -12px;
+      bottom: 18px;
+      width: 0;
+      height: 0;
+      border-top: 8px solid transparent;
+      border-bottom: 8px solid transparent;
+      border-right: 12px solid #fff;
+    }
+
+    .music-toggle {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 4;
+      border: 2px solid #fff;
+      border-radius: 10px;
+      background: #111;
+      color: #fff;
+      padding: 9px 12px;
+      font-weight: 800;
+      cursor: pointer;
+      opacity: .82;
+    }
+
+    .music-toggle:hover { opacity: 1; }
+
+    @media (max-width: 700px) {
+      .dancer-speech {
+        left: 76px;
+        bottom: 112px;
+        max-width: 190px;
+        font-size: .78rem;
+      }
+
+      .music-toggle {
+        right: 10px;
+        bottom: 10px;
+        font-size: .78rem;
+      }
+    }
+
+
+    .music-hint {
+      margin-top: 10px;
+      font-size: .78rem;
+      opacity: .55;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="dancer" aria-hidden="true">
+    <div class="dancer-head"></div>
+    <div class="dancer-body"></div>
+    <div class="dancer-arm left"></div>
+    <div class="dancer-arm right"></div>
+    <div class="dancer-leg left"></div>
+    <div class="dancer-leg right"></div>
+  </div>
+  <div id="dancerSpeech" class="dancer-speech"></div>
+  <button id="musicToggle" class="music-toggle">🎵 Música: ON</button>
+  <audio id="bgMusic" src="musica_original.wav" loop preload="auto"></audio>
+  <audio id="clickSound" src="click_simpatico.wav" preload="auto"></audio>
+
+  <main class="game">
+    <h1>🍬 Docinhos da Sorte</h1>
+    <div class="candies">Docinhos: <span id="candyCount">0</span></div>
+
+    <button id="rollButton">🎲 TENTAR A SORTE</button>
+
+    <a class="shop-button" href="loja.html">🛒 IR PARA A LOJA</a>
+
+    <div id="autoPanel" class="auto-panel">
+      <div class="auto-label">AUTO-CLIQUER · 4 tentativas por segundo</div>
+      <button id="autoToggle" class="auto-toggle">OFF</button>
+    </div>
+
+
+    <section id="result" class="result">
+      <div class="icon">🎁</div>
+      <div class="rarity">Pronto?</div>
+      <div class="message">Clique no botão para descobrir seu prêmio.</div>
+    </section>
+
+    <div class="best">
+      Melhor prêmio já obtido: <strong id="bestPrize">Nenhum</strong>
+    </div>
+    <div class="music-hint">A música começa no primeiro clique. Se estiver em OFF, ligue no botão 🎵.</div>
+  </main>
+
+  <script>
+    const basePrizes = [
+      { name: "Comum",      chance: 88.888889, candies: 1,   icon: "⚪", css: "common",    rank: 1 },
+      { name: "Incomum",    chance: 10,        candies: 2,   icon: "🟢", css: "uncommon",  rank: 2 },
+      { name: "Raro",       chance: 1,         candies: 4,   icon: "🔵", css: "rare",      rank: 3 },
+      { name: "Épico",      chance: 0.1,       candies: 8,   icon: "🟣", css: "epic",      rank: 4 },
+      { name: "Lendário",   chance: 0.01,      candies: 16,  icon: "🟡", css: "legendary", rank: 5 },
+      { name: "Único",      chance: 0.001,     candies: 32,  icon: "🔥🔴🔥", css: "unique", rank: 6 },
+      { name: "Infernal",   chance: 0.0001,    candies: 64,  icon: "⚫", css: "infernal",   rank: 7 },
+      { name: "Divino",     chance: 0.00001,   candies: 128, icon: "✨⚪✨", css: "divine",  rank: 8 },
+      { name: "FAÇANHA",    chance: 0.000001,  candies: 0,   icon: "💀", css: "nothing",   rank: 0 }
+    ];
+
+    const shopPhrases = [
+      "Vai pra loja, mão de vaca!",
+      "Esses docinhos vão criar mofo no bolso!",
+      "A loja existe por um motivo, campeão!",
+      "Compra alguma coisa antes que eu compre por você!",
+      "Tá rico e fingindo que não viu a loja?",
+      "Seu saldo tá gritando: GASTA EU!",
+      "Bora pra loja! A batata não vai se comprar sozinha.",
+      "Docinho parado não rende upgrade!",
+      "Olha esse saldo... e ainda não foi pra loja?",
+      "A loja mandou dizer que sente sua falta."
+    ];
+
+    const candyCountEl = document.getElementById("candyCount");
+    const bestPrizeEl = document.getElementById("bestPrize");
+    const resultEl = document.getElementById("result");
+    const rollButton = document.getElementById("rollButton");
+    const autoPanel = document.getElementById("autoPanel");
+    const autoToggle = document.getElementById("autoToggle");
+    const dancerSpeech = document.getElementById("dancerSpeech");
+    const musicToggle = document.getElementById("musicToggle");
+    const bgMusic = document.getElementById("bgMusic");
+    const clickSound = document.getElementById("clickSound");
+    const shopButton = document.querySelector(".shop-button");
+
+    let candies = Number(localStorage.getItem("docinhos")) || 0;
+    let bestRank = Number(localStorage.getItem("melhorPremioRank")) || 0;
+    let bestName = localStorage.getItem("melhorPremioNome") || "Nenhum";
+    let autoTimer = null;
+
+    candyCountEl.textContent = candies;
+    bestPrizeEl.textContent = bestName;
+
+    function getAdjustedPrizes() {
+      const potatoLevel = Number(localStorage.getItem("batataMagicaNivel")) || 0;
+      const multiplier = Math.pow(3, potatoLevel);
+
+      const prizes = basePrizes.map(p => ({
+        ...p,
+        chance: p.name === "FAÇANHA" ? p.chance : p.chance * multiplier
+      }));
+
+      let overflow = Math.max(
+        0,
+        prizes.reduce((sum, p) => sum + p.chance, 0) - 100
+      );
+
+      const reductionOrder = [
+        "Comum", "Incomum", "Raro", "Épico",
+        "Lendário", "Único", "Infernal", "Divino"
+      ];
+
+      for (const name of reductionOrder) {
+        if (overflow <= 0) break;
+        const prize = prizes.find(p => p.name === name);
+        const reduction = Math.min(prize.chance, overflow);
+        prize.chance -= reduction;
+        overflow -= reduction;
+      }
+
+      return prizes;
+    }
+
+    function drawPrize() {
+      const prizes = getAdjustedPrizes();
+      const roll = Math.random() * 100;
+      let cumulative = 0;
+
+      for (const prize of prizes) {
+        cumulative += prize.chance;
+        if (roll < cumulative) return prize;
+      }
+
+      return prizes[prizes.length - 1];
+    }
+
+    function nextPotatoPrice() {
+      const level = Number(localStorage.getItem("batataMagicaNivel")) || 0;
+      if (level >= 8) return Infinity;
+      return 300 * Math.pow(2, level);
+    }
+
+    function canBuySomethingInShop() {
+      const currentCandies = Number(localStorage.getItem("docinhos")) || 0;
+      const canBuyPotato = currentCandies >= nextPotatoPrice();
+
+      const autoOwned = localStorage.getItem("autoClickerComprado") === "true";
+      const canBuyAuto = !autoOwned && currentCandies >= 1000;
+
+      return canBuyPotato || canBuyAuto;
+    }
+
+    function updateShopPhrase() {
+      if (!canBuySomethingInShop()) {
+        dancerSpeech.classList.remove("visible");
+        localStorage.removeItem("shopPhraseText");
+        return;
+      }
+
+      let phrase = localStorage.getItem("shopPhraseText");
+
+      if (!phrase) {
+        phrase = shopPhrases[Math.floor(Math.random() * shopPhrases.length)];
+        localStorage.setItem("shopPhraseText", phrase);
+      }
+
+      dancerSpeech.textContent = phrase;
+      dancerSpeech.classList.add("visible");
+    }
+
+    function renderPrize(prize) {
+      candies += prize.candies;
+      localStorage.setItem("docinhos", candies);
+      candyCountEl.textContent = candies;
+
+      if (prize.rank > bestRank) {
+        bestRank = prize.rank;
+        bestName = prize.name;
+        localStorage.setItem("melhorPremioRank", bestRank);
+        localStorage.setItem("melhorPremioNome", bestName);
+        bestPrizeEl.textContent = bestName;
+      }
+
+      resultEl.className = "result " + prize.css;
+
+      if (prize.name === "FAÇANHA") {
+        resultEl.innerHTML = `
+          <div class="icon">${prize.icon}</div>
+          <div class="rarity">FAÇANHA DESBLOQUEADA</div>
+          <div class="message">
+            Você conseguiu o impossível:<br>
+            <strong>não ganhou absolutamente nada.</strong>
+          </div>
+          <div class="reward">+0 🍬</div>
+        `;
+      } else {
+        resultEl.innerHTML = `
+          <div class="icon">${prize.icon}</div>
+          <div class="rarity">${prize.name.toUpperCase()}!</div>
+          <div class="reward">+${prize.candies} 🍬</div>
+        `;
+      }
+
+      updateShopPhrase();
+    }
+
+    rollButton.addEventListener("click", () => {
+      renderPrize(drawPrize());
+    });
+
+    if (shopButton) {
+      shopButton.addEventListener("click", () => {
+        // A frase só é renovada depois que o jogador realmente visita a loja.
+        localStorage.removeItem("shopPhraseText");
+      });
+    }
+
+    function ownsAutoClicker() {
+      return localStorage.getItem("autoClickerComprado") === "true";
+    }
+
+    function isAutoClickerOn() {
+      return localStorage.getItem("autoClickerOn") === "true";
+    }
+
+    function updateAutoUI() {
+      if (!ownsAutoClicker()) {
+        autoPanel.classList.remove("visible");
+        stopAutoClicker();
+        return;
+      }
+
+      autoPanel.classList.add("visible");
+      const on = isAutoClickerOn();
+      autoToggle.textContent = on ? "ON" : "OFF";
+      autoToggle.classList.toggle("on", on);
+    }
+
+    function startAutoClicker() {
+      if (!ownsAutoClicker() || !isAutoClickerOn() || autoTimer) return;
+
+      autoTimer = setInterval(() => {
+        renderPrize(drawPrize());
+      }, 250);
+    }
+
+    function stopAutoClicker() {
+      if (autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+      }
+    }
+
+    function syncAutoClicker() {
+      updateAutoUI();
+      if (ownsAutoClicker() && isAutoClickerOn()) startAutoClicker();
+      else stopAutoClicker();
+    }
+
+    autoToggle.addEventListener("click", () => {
+      if (!ownsAutoClicker()) return;
+      const next = !isAutoClickerOn();
+      localStorage.setItem("autoClickerOn", String(next));
+      syncAutoClicker();
+    });
+
+    window.addEventListener("storage", () => {
+      candies = Number(localStorage.getItem("docinhos")) || candies;
+      candyCountEl.textContent = candies;
+      updateShopPhrase();
+      syncAutoClicker();
+    });
+
+
+    function playClickSound() {
+      try {
+        const sound = clickSound.cloneNode();
+        sound.volume = 0.48;
+        sound.play().catch(() => {});
+      } catch (e) {}
+    }
+
+    document.addEventListener("click", () => {
+      playClickSound();
+    }, true);
+
+
+    function saveMusicPosition(audioEl) {
+      if (!audioEl || !Number.isFinite(audioEl.currentTime)) return;
+      localStorage.setItem("musicPosition", String(audioEl.currentTime));
+      localStorage.setItem("musicSavedAt", String(Date.now()));
+    }
+
+    function restoreMusicPosition(audioEl) {
+      const saved = Number(localStorage.getItem("musicPosition"));
+      const savedAt = Number(localStorage.getItem("musicSavedAt"));
+
+      if (!Number.isFinite(saved) || saved < 0) return;
+
+      let target = saved;
+
+      // If the music was playing when we changed page, approximate elapsed navigation time.
+      if (localStorage.getItem("musicEnabled") !== "false" && Number.isFinite(savedAt)) {
+        target += Math.max(0, (Date.now() - savedAt) / 1000);
+      }
+
+      const apply = () => {
+        const dur = audioEl.duration;
+        if (Number.isFinite(dur) && dur > 0) {
+          audioEl.currentTime = target % dur;
+        } else {
+          audioEl.currentTime = target;
+        }
+      };
+
+      if (audioEl.readyState >= 1) apply();
+      else audioEl.addEventListener("loadedmetadata", apply, { once: true });
+    }
+
+    // Música chiptune ORIGINAL em arquivo local.
+    // O navegador só recebe play() a partir de uma interação real do usuário.
+    let musicEnabled = localStorage.getItem("musicEnabled") !== "false";
+    let musicUnlocked = false;
+
+    bgMusic.volume = 0.36;
+    restoreMusicPosition(bgMusic);
+
+    function updateMusicButton() {
+      musicToggle.textContent = musicEnabled
+        ? "🎵 Música: ON"
+        : "🔇 Música: OFF";
+    }
+
+    async function playBackgroundMusic() {
+      if (!musicEnabled) return;
+
+      try {
+        await bgMusic.play();
+        musicUnlocked = true;
+      } catch (error) {
+        // Se o navegador ainda bloquear, a próxima interação tentará novamente.
+        musicUnlocked = false;
+      }
+    }
+
+    function stopBackgroundMusic() {
+      bgMusic.pause();
+    }
+
+    musicToggle.addEventListener("click", async (event) => {
+      event.stopPropagation();
+
+      musicEnabled = !musicEnabled;
+      localStorage.setItem("musicEnabled", String(musicEnabled));
+
+      if (musicEnabled) {
+        await playBackgroundMusic();
+      } else {
+        stopBackgroundMusic();
+      }
+
+      updateMusicButton();
+    });
+
+    async function unlockMusicOnce() {
+      if (musicEnabled && bgMusic.paused) {
+        await playBackgroundMusic();
+      }
+
+      if (musicUnlocked) {
+        document.removeEventListener("pointerdown", unlockMusicOnce);
+        document.removeEventListener("keydown", unlockMusicOnce);
+      }
+    }
+
+    document.addEventListener("pointerdown", unlockMusicOnce);
+    document.addEventListener("keydown", unlockMusicOnce);
+
+
+    setInterval(() => saveMusicPosition(bgMusic), 500);
+    window.addEventListener("pagehide", () => saveMusicPosition(bgMusic));
+    window.addEventListener("beforeunload", () => saveMusicPosition(bgMusic));
+
+    updateMusicButton();
+    updateShopPhrase();
+    syncAutoClicker();
+  </script>
+</body>
+</html>
