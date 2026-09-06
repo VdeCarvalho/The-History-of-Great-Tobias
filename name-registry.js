@@ -52,6 +52,29 @@ window.TobiasNameRegistry = (() => {
     );
   }
 
+  /*
+    One-time migration for the current development build:
+    an old local test had left "Tobias" reserved after its save was deleted.
+    Remove only that stale local reservation once, without touching any save.
+  */
+  function runLocalMigrations() {
+    const MIGRATION_KEY = "tobias_migration_release_stale_tobias_v1";
+
+    if (cfg().mode !== "local") return;
+
+    try {
+      if (localStorage.getItem(MIGRATION_KEY) === "done") return;
+
+      const names = loadLocal();
+      const cleaned = names.filter(
+        existing => keyOf(existing) !== keyOf("Tobias")
+      );
+
+      saveLocal(cleaned);
+      localStorage.setItem(MIGRATION_KEY, "done");
+    } catch {}
+  }
+
   async function localSuggest(base) {
     base = cleanName(base);
 
@@ -231,6 +254,8 @@ window.TobiasNameRegistry = (() => {
       ? supabaseRelease(name)
       : localRelease(name);
   }
+
+  runLocalMigrations();
 
   return {
     cleanName,

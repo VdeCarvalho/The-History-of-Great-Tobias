@@ -1,68 +1,152 @@
 (() => {
-  const save =
-    window.TobiasSave
-      ? TobiasSave.load()
-      : null;
+  const save = window.TobiasSave ? TobiasSave.load() : null;
 
   if (!save) {
     window.location.replace("nome.html");
     return;
   }
 
-  const gameMusic =
-    document.getElementById("gameMusic");
+  TobiasSave.initializeTestInventory();
 
-  const settingsToggle =
-    document.getElementById("settingsToggle");
+  const AUDIO_KEY = "tobias_audio_settings_v1";
 
-  const settingsPanel =
-    document.getElementById("settingsPanel");
+  const playerChip = document.getElementById("playerChip");
 
-  const closeSettings =
-    document.getElementById("closeSettings");
+  const settingsToggle = document.getElementById("settingsToggle");
+  const discoveriesToggle = document.getElementById("discoveriesToggle");
+  const equipmentToggle = document.getElementById("equipmentToggle");
+  const inventoryToggle = document.getElementById("inventoryToggle");
 
-  const musicSlider =
-    document.getElementById("musicVolume");
+  const settingsPanel = document.getElementById("settingsPanel");
+  const discoveriesPanel = document.getElementById("discoveriesPanel");
+  const equipmentPanel = document.getElementById("equipmentPanel");
+  const inventoryPanel = document.getElementById("inventoryPanel");
 
-  const sfxSlider =
-    document.getElementById("sfxVolume");
+  const gameMusic = document.getElementById("gameMusic");
+  const closeSettings = document.getElementById("closeSettings");
 
-  const musicValue =
-    document.getElementById("musicValue");
+  const musicSlider = document.getElementById("musicVolume");
+  const sfxSlider = document.getElementById("sfxVolume");
+  const musicValue = document.getElementById("musicValue");
+  const sfxValue = document.getElementById("sfxValue");
+  const musicMute = document.getElementById("musicMute");
+  const sfxMute = document.getElementById("sfxMute");
 
-  const sfxValue =
-    document.getElementById("sfxValue");
+  const deleteButton = document.getElementById("deleteProgress");
+  const dialogOne = document.getElementById("deleteDialogOne");
+  const dialogTwo = document.getElementById("deleteDialogTwo");
+  const noOne = document.getElementById("deleteNoOne");
+  const yesOne = document.getElementById("deleteYesOne");
+  const noTwo = document.getElementById("deleteNoTwo");
+  const yesTwo = document.getElementById("deleteYesTwo");
 
-  const musicMute =
-    document.getElementById("musicMute");
+  const inventoryGrid = document.getElementById("inventoryGrid");
+  const closeInventory = document.getElementById("closeInventory");
 
-  const sfxMute =
-    document.getElementById("sfxMute");
+  const itemDetailPanel = document.getElementById("itemDetailPanel");
+  const detailIcon = document.getElementById("detailIcon");
+  const detailName = document.getElementById("detailName");
+  const detailType = document.getElementById("detailType");
+  const detailDescription = document.getElementById("detailDescription");
+  const detailCrafting = document.getElementById("detailCrafting");
+  const detailQuantity = document.getElementById("detailQuantity");
+  const equipItem = document.getElementById("equipItem");
+  const discardItem = document.getElementById("discardItem");
+  const closeItemDetail = document.getElementById("closeItemDetail");
 
-  const deleteButton =
-    document.getElementById("deleteProgress");
+  const discardDialog = document.getElementById("discardDialog");
+  const discardQuestion = document.getElementById("discardQuestion");
+  const discardNo = document.getElementById("discardNo");
+  const discardYes = document.getElementById("discardYes");
 
-  const dialogOne =
-    document.getElementById("deleteDialogOne");
+  const allPanels = [
+    settingsPanel,
+    discoveriesPanel,
+    equipmentPanel,
+    inventoryPanel,
+    itemDetailPanel
+  ];
 
-  const dialogTwo =
-    document.getElementById("deleteDialogTwo");
+  let selectedInventoryIndex = null;
 
-  const noOne =
-    document.getElementById("deleteNoOne");
+  // ----------------------------------------------------------
+  // Player identity
+  // ----------------------------------------------------------
+  playerChip.textContent = save.playerName;
+  playerChip.title = `Jogador: ${save.playerName}`;
 
-  const yesOne =
-    document.getElementById("deleteYesOne");
+  // ----------------------------------------------------------
+  // Generic panel helpers
+  // ----------------------------------------------------------
+  function hidePanel(panel) {
+    if (!panel) return;
+    panel.classList.remove("open");
+    panel.setAttribute("aria-hidden", "true");
+  }
 
-  const noTwo =
-    document.getElementById("deleteNoTwo");
+  function showPanel(panel) {
+    if (!panel) return;
 
-  const yesTwo =
-    document.getElementById("deleteYesTwo");
+    allPanels.forEach(p => {
+      if (p !== panel) hidePanel(p);
+    });
 
-  const AUDIO_KEY =
-    "tobias_audio_settings_v1";
+    panel.classList.add("open");
+    panel.setAttribute("aria-hidden", "false");
+  }
 
+  function closeDanger(dialog) {
+    if (!dialog) return;
+    dialog.classList.remove("open");
+    dialog.setAttribute("aria-hidden", "true");
+  }
+
+  function openDanger(dialog) {
+    if (!dialog) return;
+    dialog.classList.add("open");
+    dialog.setAttribute("aria-hidden", "false");
+  }
+
+  discoveriesToggle.addEventListener("click", () => {
+    showPanel(discoveriesPanel);
+  });
+
+  equipmentToggle.addEventListener("click", () => {
+    showPanel(equipmentPanel);
+  });
+
+  inventoryToggle.addEventListener("click", () => {
+    renderInventory();
+    showPanel(inventoryPanel);
+  });
+
+  settingsToggle.addEventListener("click", () => {
+    showPanel(settingsPanel);
+  });
+
+  document.querySelectorAll("[data-close-panel]").forEach(button => {
+    button.addEventListener("click", () => {
+      hidePanel(
+        document.getElementById(
+          button.dataset.closePanel
+        )
+      );
+    });
+  });
+
+  closeInventory.addEventListener("click", () => {
+    hidePanel(inventoryPanel);
+  });
+
+  closeSettings.addEventListener("click", () => {
+    hidePanel(settingsPanel);
+    closeDanger(dialogOne);
+    closeDanger(dialogTwo);
+  });
+
+  // ----------------------------------------------------------
+  // Audio settings
+  // ----------------------------------------------------------
   const defaultAudio = {
     musicVolume: 0.42,
     musicMuted: false,
@@ -72,23 +156,14 @@
 
   function readAudioSettings() {
     try {
-      const stored =
-        JSON.parse(
-          localStorage.getItem(AUDIO_KEY) || "{}"
-        );
+      const stored = JSON.parse(
+        localStorage.getItem(AUDIO_KEY) || "{}"
+      );
 
       return {
         musicVolume:
-          Number.isFinite(
-            Number(stored.musicVolume)
-          )
-            ? Math.max(
-                0,
-                Math.min(
-                  1,
-                  Number(stored.musicVolume)
-                )
-              )
+          Number.isFinite(Number(stored.musicVolume))
+            ? Math.max(0, Math.min(1, Number(stored.musicVolume)))
             : defaultAudio.musicVolume,
 
         musicMuted:
@@ -97,16 +172,8 @@
             : defaultAudio.musicMuted,
 
         sfxVolume:
-          Number.isFinite(
-            Number(stored.sfxVolume)
-          )
-            ? Math.max(
-                0,
-                Math.min(
-                  1,
-                  Number(stored.sfxVolume)
-                )
-              )
+          Number.isFinite(Number(stored.sfxVolume))
+            ? Math.max(0, Math.min(1, Number(stored.sfxVolume)))
             : defaultAudio.sfxVolume,
 
         sfxMuted:
@@ -132,53 +199,20 @@
     gameMusic.volume = audio.musicVolume;
     gameMusic.muted = audio.musicMuted;
 
-    musicSlider.value =
-      Math.round(audio.musicVolume * 100);
+    musicSlider.value = Math.round(audio.musicVolume * 100);
+    sfxSlider.value = Math.round(audio.sfxVolume * 100);
 
-    sfxSlider.value =
-      Math.round(audio.sfxVolume * 100);
+    musicValue.textContent = `${musicSlider.value}%`;
+    sfxValue.textContent = `${sfxSlider.value}%`;
 
-    musicValue.textContent =
-      `${musicSlider.value}%`;
-
-    sfxValue.textContent =
-      `${sfxSlider.value}%`;
-
-    const musicIcon =
-      musicMute.querySelector(".audio-icon");
-
-    const sfxIcon =
-      sfxMute.querySelector(".audio-icon");
-
-    musicIcon.textContent =
+    musicMute.querySelector(".audio-icon").textContent =
       audio.musicMuted ? "🔇" : "🔊";
 
-    sfxIcon.textContent =
+    sfxMute.querySelector(".audio-icon").textContent =
       audio.sfxMuted ? "🔇" : "🔊";
 
-    musicMute.classList.toggle(
-      "muted",
-      audio.musicMuted
-    );
-
-    sfxMute.classList.toggle(
-      "muted",
-      audio.sfxMuted
-    );
-
-    musicMute.setAttribute(
-      "aria-label",
-      audio.musicMuted
-        ? "Desmutar música"
-        : "Mutar música"
-    );
-
-    sfxMute.setAttribute(
-      "aria-label",
-      audio.sfxMuted
-        ? "Desmutar efeitos de áudio"
-        : "Mutar efeitos de áudio"
-    );
+    musicMute.classList.toggle("muted", audio.musicMuted);
+    sfxMute.classList.toggle("muted", audio.sfxMuted);
   }
 
   function resumeMusic() {
@@ -187,234 +221,255 @@
     }
   }
 
-  window.addEventListener(
-    "pageshow",
-    resumeMusic
-  );
+  musicSlider.addEventListener("input", () => {
+    audio.musicVolume = Number(musicSlider.value) / 100;
+    musicValue.textContent = `${musicSlider.value}%`;
+    gameMusic.volume = audio.musicVolume;
+    saveAudioSettings();
+  });
 
-  window.addEventListener(
-    "focus",
-    resumeMusic
-  );
+  sfxSlider.addEventListener("input", () => {
+    audio.sfxVolume = Number(sfxSlider.value) / 100;
+    sfxValue.textContent = `${sfxSlider.value}%`;
+    saveAudioSettings();
+  });
 
-  document.addEventListener(
-    "visibilitychange",
-    () => {
-      if (!document.hidden) {
-        resumeMusic();
-      }
+  musicMute.addEventListener("click", async () => {
+    audio.musicMuted = !audio.musicMuted;
+    applyAudioSettings();
+    saveAudioSettings();
+
+    if (!audio.musicMuted) {
+      await gameMusic.play().catch(() => {});
     }
-  );
+  });
+
+  sfxMute.addEventListener("click", () => {
+    audio.sfxMuted = !audio.sfxMuted;
+    applyAudioSettings();
+    saveAudioSettings();
+  });
 
   // ----------------------------------------------------------
-  // Settings panel
+  // Inventory: 100 slots, 4 columns x 25 rows
   // ----------------------------------------------------------
-  function openSettings() {
-    settingsPanel.classList.add("open");
+  function renderInventory() {
+    const inventory = TobiasSave.loadInventory();
 
-    settingsPanel.setAttribute(
-      "aria-hidden",
-      "false"
-    );
+    inventoryGrid.innerHTML = "";
 
-    settingsToggle.setAttribute(
-      "aria-expanded",
-      "true"
-    );
-  }
+    for (let slotIndex = 0; slotIndex < 100; slotIndex++) {
+      const slot = document.createElement("button");
+      slot.type = "button";
+      slot.className = "inventory-slot";
+      slot.dataset.slotIndex = String(slotIndex);
 
-  function closeDangerDialog(dialog) {
-    dialog.classList.remove("open");
+      const item = inventory[slotIndex];
 
-    dialog.setAttribute(
-      "aria-hidden",
-      "true"
-    );
-  }
+      if (item) {
+        slot.classList.add("occupied");
 
-  function closeSettingsPanel() {
-    settingsPanel.classList.remove("open");
+        const icon = document.createElement("span");
+        icon.className = "slot-icon";
+        icon.textContent = item.icon || "◆";
 
-    settingsPanel.setAttribute(
-      "aria-hidden",
-      "true"
-    );
+        const quantity = document.createElement("span");
+        quantity.className = "slot-quantity";
+        quantity.textContent =
+          Number(item.quantity || 0).toLocaleString("pt-BR");
 
-    settingsToggle.setAttribute(
-      "aria-expanded",
-      "false"
-    );
+        slot.appendChild(icon);
+        slot.appendChild(quantity);
 
-    closeDangerDialog(dialogOne);
-    closeDangerDialog(dialogTwo);
-  }
-
-  settingsToggle.addEventListener(
-    "click",
-    openSettings
-  );
-
-  closeSettings.addEventListener(
-    "click",
-    closeSettingsPanel
-  );
-
-  // ----------------------------------------------------------
-  // Volume controls
-  // ----------------------------------------------------------
-  musicSlider.addEventListener(
-    "input",
-    () => {
-      audio.musicVolume =
-        Number(musicSlider.value) / 100;
-
-      musicValue.textContent =
-        `${musicSlider.value}%`;
-
-      gameMusic.volume =
-        audio.musicVolume;
-
-      saveAudioSettings();
-    }
-  );
-
-  sfxSlider.addEventListener(
-    "input",
-    () => {
-      audio.sfxVolume =
-        Number(sfxSlider.value) / 100;
-
-      sfxValue.textContent =
-        `${sfxSlider.value}%`;
-
-      saveAudioSettings();
-    }
-  );
-
-  musicMute.addEventListener(
-    "click",
-    async () => {
-      audio.musicMuted =
-        !audio.musicMuted;
-
-      applyAudioSettings();
-      saveAudioSettings();
-
-      if (!audio.musicMuted) {
-        await gameMusic
-          .play()
-          .catch(() => {});
-      }
-    }
-  );
-
-  sfxMute.addEventListener(
-    "click",
-    () => {
-      audio.sfxMuted =
-        !audio.sfxMuted;
-
-      applyAudioSettings();
-      saveAudioSettings();
-    }
-  );
-
-  // ----------------------------------------------------------
-  // Delete progress
-  // ----------------------------------------------------------
-  function openDangerDialog(dialog) {
-    dialog.classList.add("open");
-
-    dialog.setAttribute(
-      "aria-hidden",
-      "false"
-    );
-  }
-
-  deleteButton.addEventListener(
-    "click",
-    () => {
-      openDangerDialog(dialogOne);
-    }
-  );
-
-  noOne.addEventListener(
-    "click",
-    () => {
-      closeDangerDialog(dialogOne);
-    }
-  );
-
-  yesOne.addEventListener(
-    "click",
-    () => {
-      closeDangerDialog(dialogOne);
-      openDangerDialog(dialogTwo);
-    }
-  );
-
-  noTwo.addEventListener(
-    "click",
-    () => {
-      closeDangerDialog(dialogTwo);
-    }
-  );
-
-  yesTwo.addEventListener(
-    "click",
-    async () => {
-      const currentSave =
-        TobiasSave.load();
-
-      yesTwo.disabled = true;
-      yesTwo.textContent = "APAGANDO...";
-
-      try {
-        /*
-          The player's username is released before the
-          local save is erased.
-
-          Tobias -> delete progress -> Tobias is available again.
-        */
-        if (
-          currentSave?.playerName &&
-          window.TobiasNameRegistry
-        ) {
-          await TobiasNameRegistry.release(
-            currentSave.playerName
-          );
-        }
-
-        TobiasSave.clearAllProgress();
-
-        window.location.replace(
-          "index.html"
+        slot.setAttribute(
+          "aria-label",
+          `${item.name}, quantidade ${item.quantity}`
         );
-      } catch (error) {
-        console.error(error);
 
-        yesTwo.disabled = false;
-
-        yesTwo.textContent =
-          "SIM, APAGAR TUDO";
-
-        alert(
-          "Não foi possível liberar o nome e apagar o progresso. Tente novamente."
+        slot.addEventListener("click", () => {
+          openItemDetail(slotIndex);
+        });
+      } else {
+        slot.disabled = true;
+        slot.setAttribute(
+          "aria-label",
+          `Slot ${slotIndex + 1} vazio`
         );
       }
+
+      inventoryGrid.appendChild(slot);
     }
-  );
+  }
+
+  function openItemDetail(index) {
+    const inventory = TobiasSave.loadInventory();
+    const item = inventory[index];
+
+    if (!item) return;
+
+    selectedInventoryIndex = index;
+
+    detailIcon.textContent = item.icon || "◆";
+    detailName.textContent = item.name;
+    detailType.textContent = item.type;
+    detailDescription.textContent = item.description || "Descrição a definir.";
+    detailCrafting.textContent =
+      item.craftable
+        ? `Materiais necessários: ${item.crafting || "a definir"}`
+        : "Item não fabricável";
+
+    detailQuantity.textContent =
+      `Quantidade: ${Number(item.quantity || 0).toLocaleString("pt-BR")}`;
+
+    equipItem.style.display =
+      item.equippable ? "" : "none";
+
+    showPanel(itemDetailPanel);
+  }
+
+  closeItemDetail.addEventListener("click", () => {
+    hidePanel(itemDetailPanel);
+    renderInventory();
+    showPanel(inventoryPanel);
+  });
+
+  equipItem.addEventListener("click", () => {
+    if (selectedInventoryIndex === null) return;
+
+    const inventory = TobiasSave.loadInventory();
+    const item = inventory[selectedInventoryIndex];
+
+    if (!item || !item.equippable) return;
+
+    const equipment = TobiasSave.loadEquipment();
+
+    // Prototype: one generic equipment field until equipment slots
+    // are defined later.
+    equipment.main = {
+      ...item,
+      quantity: 1
+    };
+
+    TobiasSave.saveEquipment(equipment);
+
+    // Equipment leaves the inventory when equipped.
+    if (item.quantity > 1) {
+      item.quantity -= 1;
+    } else {
+      inventory.splice(selectedInventoryIndex, 1);
+    }
+
+    TobiasSave.saveInventory(inventory);
+
+    selectedInventoryIndex = null;
+    hidePanel(itemDetailPanel);
+    renderInventory();
+    showPanel(inventoryPanel);
+  });
+
+  discardItem.addEventListener("click", () => {
+    if (selectedInventoryIndex === null) return;
+
+    const inventory = TobiasSave.loadInventory();
+    const item = inventory[selectedInventoryIndex];
+
+    if (!item) return;
+
+    discardQuestion.textContent =
+      `Você tem certeza que quer descartar ${item.name}?`;
+
+    openDanger(discardDialog);
+  });
+
+  discardNo.addEventListener("click", () => {
+    closeDanger(discardDialog);
+  });
+
+  discardYes.addEventListener("click", () => {
+    if (selectedInventoryIndex === null) {
+      closeDanger(discardDialog);
+      return;
+    }
+
+    const inventory = TobiasSave.loadInventory();
+    const item = inventory[selectedInventoryIndex];
+
+    if (item) {
+      // Discard removes the whole selected stack.
+      inventory.splice(selectedInventoryIndex, 1);
+      TobiasSave.saveInventory(inventory);
+    }
+
+    selectedInventoryIndex = null;
+
+    closeDanger(discardDialog);
+    hidePanel(itemDetailPanel);
+
+    renderInventory();
+    showPanel(inventoryPanel);
+  });
 
   // ----------------------------------------------------------
-  // Initial state
+  // Delete all progress + release username
   // ----------------------------------------------------------
-  applyAudioSettings();
-  resumeMusic();
+  deleteButton.addEventListener("click", () => {
+    openDanger(dialogOne);
+  });
 
-  /*
-    Audible autoplay can be blocked by the browser.
-    First player interaction unlocks it.
-  */
+  noOne.addEventListener("click", () => {
+    closeDanger(dialogOne);
+  });
+
+  yesOne.addEventListener("click", () => {
+    closeDanger(dialogOne);
+    openDanger(dialogTwo);
+  });
+
+  noTwo.addEventListener("click", () => {
+    closeDanger(dialogTwo);
+  });
+
+  yesTwo.addEventListener("click", async () => {
+    const currentSave = TobiasSave.load();
+
+    yesTwo.disabled = true;
+    yesTwo.textContent = "APAGANDO...";
+
+    try {
+      if (
+        currentSave?.playerName &&
+        window.TobiasNameRegistry
+      ) {
+        await TobiasNameRegistry.release(
+          currentSave.playerName
+        );
+      }
+
+      TobiasSave.clearAllProgress();
+
+      window.location.replace("index.html");
+    } catch (error) {
+      console.error(error);
+
+      yesTwo.disabled = false;
+      yesTwo.textContent = "SIM, APAGAR TUDO";
+
+      alert(
+        "Não foi possível liberar o nome e apagar o progresso. Tente novamente."
+      );
+    }
+  });
+
+  // ----------------------------------------------------------
+  // Lifecycle
+  // ----------------------------------------------------------
+  window.addEventListener("pageshow", resumeMusic);
+  window.addEventListener("focus", resumeMusic);
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) resumeMusic();
+  });
+
   document.addEventListener(
     "pointerdown",
     () => {
@@ -424,4 +479,8 @@
     },
     { passive: true }
   );
+
+  applyAudioSettings();
+  resumeMusic();
+  renderInventory();
 })();
