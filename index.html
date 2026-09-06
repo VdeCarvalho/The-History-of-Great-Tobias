@@ -24,9 +24,9 @@
         <div class="title-ornament"><i></i><b>◆</b><i></i></div>
       </header>
 
-      <nav class="game-actions">
-        <a class="fantasy-button primary" href="jogo.html"><span>CONTINUAR HISTÓRIA</span></a>
-        <a class="fantasy-button secondary" href="jogo.html"><span>CRIAR NOVA HISTÓRIA</span></a>
+      <nav class="game-actions" aria-label="Menu principal">
+        <div class="fantasy-button primary button-slot-placeholder" aria-hidden="true"></div>
+        <a class="fantasy-button secondary" id="playButton" href="nome.html"><span>JOGAR</span></a>
       </nav>
 
       <button class="sound-toggle" id="soundToggle" type="button" aria-label="Ligar ou desligar música"><span id="soundIcon">♪</span></button>
@@ -34,6 +34,7 @@
       <audio id="bgMusic" src="tobias_theme.mp3" loop preload="auto"></audio>
     </section>
   </main>
+  <script src="save-system.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

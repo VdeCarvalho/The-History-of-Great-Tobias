@@ -1,0 +1,1 @@
+window.TOBIAS_BACKEND={mode:"local",supabaseUrl:"",supabaseAnonKey:"",maxSuffix:99999};

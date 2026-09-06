@@ -105,3 +105,25 @@ audio {
     max-height: 100dvh;
   }
 }
+
+
+/* JOGAR stays exactly where the old second button was. */
+.button-slot-placeholder{visibility:hidden;pointer-events:none}
+
+/* NAME PAGE */
+.name-page .game-stage{background:#0b1723}
+.name-page .hero-video{filter:brightness(.60) saturate(.88)}
+.name-overlay{position:absolute;inset:0;z-index:2;background:linear-gradient(to bottom,rgba(4,12,20,.08),rgba(3,10,16,.34) 56%,rgba(3,8,12,.64)),radial-gradient(circle at 50% 52%,transparent 0 30%,rgba(0,0,0,.20) 82%);pointer-events:none}
+.name-panel{position:absolute;z-index:5;left:9%;right:9%;top:49%;transform:translateY(-50%);padding:clamp(22px,6.2vw,72px) clamp(18px,5vw,58px);border:clamp(1px,.35vw,4px) solid rgba(223,184,83,.68);border-radius:clamp(14px,3.2vw,38px);background:linear-gradient(180deg,rgba(16,31,42,.91),rgba(5,14,21,.94));box-shadow:0 16px 45px rgba(0,0,0,.46),inset 0 0 28px rgba(255,213,93,.055);backdrop-filter:blur(7px);text-align:center;animation:namePanelIn .65s cubic-bezier(.2,.8,.2,1) both}
+.name-panel .mini-ornament{color:#e4bf61;font-size:clamp(14px,3.8vw,42px);margin-bottom:.25em;text-shadow:0 0 12px rgba(255,222,112,.35)}
+.name-panel h1{margin:0;font-size:clamp(26px,7.4vw,82px);line-height:1.02;color:#f5e8bd;text-shadow:0 4px 8px rgba(0,0,0,.55)}
+.name-subtitle{margin:.8em auto 1.35em;max-width:86%;font-family:Arial,sans-serif;font-size:clamp(12px,3.1vw,30px);line-height:1.35;color:rgba(255,255,255,.78)}
+.name-form{display:flex;flex-direction:column;gap:clamp(11px,2.7vw,30px)}
+.name-input{width:100%;min-height:clamp(50px,13vw,150px);border-radius:clamp(9px,2.2vw,25px);border:clamp(1px,.35vw,4px) solid rgba(236,204,111,.62);background:rgba(248,246,228,.96);color:#26313a;outline:none;padding:0 5%;font:700 clamp(17px,4.7vw,52px) Georgia,"Times New Roman",serif;text-align:center;box-shadow:inset 0 3px 10px rgba(0,0,0,.10)}
+.name-input:focus{border-color:#f5ce60;box-shadow:0 0 0 clamp(2px,.55vw,6px) rgba(247,204,86,.15),inset 0 3px 10px rgba(0,0,0,.10)}
+.name-confirm{min-height:clamp(48px,12vw,140px);border-radius:clamp(9px,2.2vw,25px);border:clamp(2px,.5vw,6px) solid #7f5717;background:linear-gradient(180deg,#fff0a0 0%,#f6c94b 42%,#d18d1e 78%,#edb53a 100%);color:#40280b;font:900 clamp(14px,4.15vw,48px) Georgia,"Times New Roman",serif;letter-spacing:.035em;cursor:pointer;box-shadow:0 7px 13px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.75)}
+.name-status{min-height:1.5em;margin-top:.9em;font-family:Arial,sans-serif;font-size:clamp(11px,2.8vw,27px);line-height:1.35;color:#f1d978}.name-status.error{color:#ffb1a8}
+.suggestion-box{display:none;margin-top:clamp(15px,4vw,46px);padding-top:clamp(15px,4vw,46px);border-top:1px solid rgba(239,207,112,.24)}.suggestion-box.visible{display:block;animation:suggestionIn .35s ease both}
+.suggestion-question{margin:0 0 .95em;font-size:clamp(17px,4.6vw,50px);line-height:1.22;color:#fff0bd}.suggestion-name{color:#f3c94f;white-space:nowrap}.suggestion-actions{display:flex;gap:clamp(9px,2.2vw,25px)}.suggestion-actions button{flex:1;min-height:clamp(45px,11.2vw,130px);border-radius:clamp(8px,2vw,23px);cursor:pointer;font:800 clamp(12px,3.5vw,40px) Georgia,"Times New Roman",serif}.accept-name{border:2px solid #8a651d;background:linear-gradient(180deg,#f7db75,#d69a27);color:#382408}.retry-name{border:2px solid rgba(222,192,104,.55);background:rgba(11,25,34,.88);color:#f5dc91}
+.back-link{position:absolute;z-index:6;top:2.5%;left:3.5%;width:clamp(36px,10vw,112px);aspect-ratio:1;display:grid;place-items:center;border-radius:50%;border:2px solid rgba(235,205,117,.65);background:rgba(4,14,21,.55);color:#f7df99;text-decoration:none;font-size:clamp(21px,6vw,67px);line-height:1;backdrop-filter:blur(5px)}
+@keyframes namePanelIn{from{opacity:0;transform:translateY(-46%) scale(.96)}to{opacity:1;transform:translateY(-50%) scale(1)}}@keyframes suggestionIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
