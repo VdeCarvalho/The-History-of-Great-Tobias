@@ -1,1 +1,204 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1520"><title>A História do Grande Tobias — Em construção</title><style>*{box-sizing:border-box}html,body{margin:0;min-height:100%}body{min-height:100svh;display:grid;place-items:center;background:radial-gradient(circle at 50% 30%,#29445d 0%,#101d2b 42%,#060b11 100%);color:#f4e3ad;font-family:Georgia,"Times New Roman",serif;text-align:center;padding:32px}.box{width:min(88vw,720px);padding:56px 28px;border:1px solid rgba(239,201,99,.45);border-radius:18px;background:rgba(5,12,18,.48);box-shadow:0 20px 60px rgba(0,0,0,.35),inset 0 0 30px rgba(255,220,120,.03)}.diamond{font-size:28px;color:#d6ae49;margin-bottom:14px}h1{margin:0;font-size:clamp(28px,8vw,58px);letter-spacing:.06em}p{margin:16px 0 0;font-family:Arial,sans-serif;color:rgba(255,255,255,.72)}.player{color:#efc85c;font-weight:700}</style></head><body><main class="box"><div class="diamond">◆</div><h1>PÁGINA EM CONSTRUÇÃO</h1><p id="welcome">A aventura do Grande Tobias continua em breve.</p></main><script src="save-system.js"></script><script>const s=TobiasSave.load();if(!s){location.replace("nome.html")}else{const p=document.getElementById("welcome");p.textContent="Bem-vindo, "+s.playerName+". A aventura do Grande Tobias continua em breve."}</script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1b2b">
+  <title>A História do Grande Tobias</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="game-page">
+  <main class="page-shell">
+
+    <!-- Área reservada para publicidade. O painel nunca invade este espaço. -->
+    <section class="ad-slot" aria-label="Espaço reservado para publicidade">
+      <span>PUBLICIDADE</span>
+    </section>
+
+    <!-- Toda a interface do jogo existe exclusivamente dentro desta região. -->
+    <section class="game-stage gameplay-stage" id="gameplayStage">
+
+      <!-- Fundo temporário enquanto construímos a primeira área real do jogo. -->
+      <video
+        id="gameBackgroundVideo"
+        class="hero-video game-background-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="auto"
+        aria-hidden="true"
+      >
+        <source src="tobias_intro.mp4" type="video/mp4">
+      </video>
+
+      <div class="gameplay-shade" aria-hidden="true"></div>
+
+      <!-- HUD provisório. -->
+      <div class="player-chip" id="playerChip"></div>
+
+      <!-- Mesma posição do antigo botão de áudio da tela inicial. -->
+      <button
+        class="settings-toggle"
+        id="settingsToggle"
+        type="button"
+        aria-label="Abrir configurações"
+        aria-controls="settingsPanel"
+        aria-expanded="false"
+      >
+        <span aria-hidden="true">⚙</span>
+      </button>
+
+      <!-- PAINEL DE CONFIGURAÇÕES: fica 100% dentro da game-stage. -->
+      <section
+        class="settings-panel"
+        id="settingsPanel"
+        aria-hidden="true"
+        aria-labelledby="settingsTitle"
+      >
+        <div class="settings-panel-inner">
+
+          <div class="settings-heading">
+            <div class="settings-diamond">◆</div>
+            <h1 id="settingsTitle">CONFIGURAÇÕES</h1>
+            <p>ÁUDIO DO JOGO</p>
+          </div>
+
+          <div class="audio-setting-row">
+            <div class="audio-setting-copy">
+              <label for="musicVolume">Música</label>
+              <output id="musicValue" for="musicVolume">42%</output>
+            </div>
+
+            <div class="audio-control-line">
+              <input
+                class="fantasy-slider"
+                id="musicVolume"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="42"
+                aria-label="Volume da música"
+              >
+              <button
+                class="audio-mute-button"
+                id="musicMute"
+                type="button"
+                aria-label="Mutar música"
+              >
+                <span class="audio-icon" aria-hidden="true">🔊</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="audio-setting-row">
+            <div class="audio-setting-copy">
+              <label for="sfxVolume">Efeitos de áudio</label>
+              <output id="sfxValue" for="sfxVolume">70%</output>
+            </div>
+
+            <div class="audio-control-line">
+              <input
+                class="fantasy-slider"
+                id="sfxVolume"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="70"
+                aria-label="Volume dos efeitos de áudio"
+              >
+              <button
+                class="audio-mute-button"
+                id="sfxMute"
+                type="button"
+                aria-label="Mutar efeitos de áudio"
+              >
+                <span class="audio-icon" aria-hidden="true">🔊</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-spacer"></div>
+
+          <button class="settings-play-button" id="closeSettings" type="button">
+            JOGAR
+          </button>
+
+          <button class="delete-progress-button" id="deleteProgress" type="button">
+            DELETAR PROGRESSO
+          </button>
+
+        </div>
+      </section>
+
+      <!-- CONFIRMAÇÃO 1 -->
+      <section
+        class="danger-dialog"
+        id="deleteDialogOne"
+        role="dialog"
+        aria-modal="true"
+        aria-hidden="true"
+        aria-labelledby="deleteTitleOne"
+      >
+        <div class="danger-card">
+          <div class="danger-symbol">!</div>
+          <h2 id="deleteTitleOne">ATENÇÃO</h2>
+          <p>
+            Esta ação vai deletar completamente todo o progresso armazenado
+            neste dispositivo e neste navegador.
+          </p>
+          <p class="danger-emphasis">
+            Isso não pode ser revertido.
+          </p>
+          <p>Você tem certeza que quer apagar todo o seu progresso?</p>
+
+          <div class="danger-actions">
+            <button class="danger-no" id="deleteNoOne" type="button">NÃO</button>
+            <button class="danger-yes" id="deleteYesOne" type="button">SIM</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONFIRMAÇÃO 2 -->
+      <section
+        class="danger-dialog"
+        id="deleteDialogTwo"
+        role="dialog"
+        aria-modal="true"
+        aria-hidden="true"
+        aria-labelledby="deleteTitleTwo"
+      >
+        <div class="danger-card second-warning">
+          <div class="danger-symbol">!!</div>
+          <h2 id="deleteTitleTwo">VOCÊ REALMENTE TEM CERTEZA?</h2>
+          <p>
+            Tipo... <strong>certeza mesmo?</strong>
+          </p>
+          <p>
+            O Tobias não vai conseguir voltar no tempo para buscar esse save.
+          </p>
+          <p class="danger-emphasis">
+            Última chance.
+          </p>
+
+          <div class="danger-actions">
+            <button class="danger-no" id="deleteNoTwo" type="button">NÃO</button>
+            <button class="danger-yes final-delete" id="deleteYesTwo" type="button">
+              SIM, APAGAR TUDO
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <audio id="gameMusic" src="tobias_theme.mp3" loop preload="auto"></audio>
+
+    </section>
+  </main>
+
+  <script src="save-system.js"></script>
+  <script src="jogo.js"></script>
+</body>
+</html>

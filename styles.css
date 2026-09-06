@@ -127,3 +127,437 @@ audio {
 .suggestion-question{margin:0 0 .95em;font-size:clamp(17px,4.6vw,50px);line-height:1.22;color:#fff0bd}.suggestion-name{color:#f3c94f;white-space:nowrap}.suggestion-actions{display:flex;gap:clamp(9px,2.2vw,25px)}.suggestion-actions button{flex:1;min-height:clamp(45px,11.2vw,130px);border-radius:clamp(8px,2vw,23px);cursor:pointer;font:800 clamp(12px,3.5vw,40px) Georgia,"Times New Roman",serif}.accept-name{border:2px solid #8a651d;background:linear-gradient(180deg,#f7db75,#d69a27);color:#382408}.retry-name{border:2px solid rgba(222,192,104,.55);background:rgba(11,25,34,.88);color:#f5dc91}
 .back-link{position:absolute;z-index:6;top:2.5%;left:3.5%;width:clamp(36px,10vw,112px);aspect-ratio:1;display:grid;place-items:center;border-radius:50%;border:2px solid rgba(235,205,117,.65);background:rgba(4,14,21,.55);color:#f7df99;text-decoration:none;font-size:clamp(21px,6vw,67px);line-height:1;backdrop-filter:blur(5px)}
 @keyframes namePanelIn{from{opacity:0;transform:translateY(-46%) scale(.96)}to{opacity:1;transform:translateY(-50%) scale(1)}}@keyframes suggestionIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+
+/* =========================================================
+   UPDATE — MAIN MENU JOGAR BUTTON IS YELLOW
+   ========================================================= */
+#playButton.fantasy-button {
+  color: #42270d;
+  border: clamp(2px, .55vw, 6px) solid #68400e;
+  background:
+    linear-gradient(180deg,
+      #fff1a0 0%,
+      #f8ce59 36%,
+      #d59324 72%,
+      #efbc42 100%);
+  text-shadow: 0 1px 0 rgba(255,255,255,.65);
+  box-shadow:
+    0 7px 12px rgba(0,0,0,.38),
+    inset 0 1px 0 rgba(255,255,255,.75);
+}
+
+/* =========================================================
+   FIRST GAME SCREEN / SETTINGS INTERFACE
+   Everything below lives ONLY inside .game-stage.
+   ========================================================= */
+.gameplay-stage {
+  background:
+    radial-gradient(circle at 50% 24%, #497a9c 0%, #173248 50%, #08141f 100%);
+}
+
+.game-background-video {
+  filter: brightness(.72) saturate(.92);
+}
+
+.gameplay-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(3,10,17,.04),
+      rgba(3,10,17,.02) 48%,
+      rgba(3,10,17,.20) 100%
+    );
+}
+
+.player-chip {
+  position: absolute;
+  z-index: 4;
+  top: 2.6%;
+  left: 3.6%;
+  max-width: 55%;
+  padding: .58em .85em;
+  border-radius: 999px;
+  border: 1px solid rgba(246,219,132,.48);
+  background: rgba(4,15,23,.48);
+  color: #ffe9a4;
+  font: 700 clamp(11px, 3.1vw, 34px) Georgia, "Times New Roman", serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 15px rgba(0,0,0,.25);
+}
+
+.settings-toggle {
+  position: absolute;
+  z-index: 10;
+  right: 3%;
+  bottom: 2.2%;
+  width: clamp(34px, 9vw, 104px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid rgba(248,216,121,.75);
+  background: rgba(5,16,24,.67);
+  color: #f9df8c;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: clamp(18px, 5vw, 57px);
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(5px);
+  box-shadow:
+    0 4px 15px rgba(0,0,0,.3),
+    inset 0 0 12px rgba(255,224,127,.09);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-toggle:active {
+  transform: scale(.95);
+}
+
+/* Full game-region overlay. It never reaches the ad slot. */
+.settings-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(49,86,109,.97), rgba(8,20,30,.985) 49%, rgba(3,9,14,.995) 100%);
+  color: #fff;
+}
+
+.settings-panel.open {
+  display: block;
+  animation: settingsPanelIn .24s ease-out both;
+}
+
+.settings-panel-inner {
+  height: 100%;
+  width: 100%;
+  padding:
+    clamp(24px, 7.2vw, 84px)
+    clamp(28px, 8.5vw, 99px)
+    clamp(20px, 5.8vw, 68px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.settings-heading {
+  text-align: center;
+  margin-bottom: clamp(24px, 7vw, 82px);
+}
+
+.settings-diamond {
+  color: #e5bc54;
+  font-size: clamp(14px, 4vw, 46px);
+  margin-bottom: .2em;
+  text-shadow: 0 0 13px rgba(255,220,102,.4);
+}
+
+.settings-heading h1 {
+  margin: 0;
+  color: #f5e9bd;
+  font-size: clamp(29px, 8.3vw, 96px);
+  line-height: 1;
+  letter-spacing: .045em;
+  text-shadow: 0 5px 10px rgba(0,0,0,.5);
+}
+
+.settings-heading p {
+  margin: .55em 0 0;
+  color: rgba(255,255,255,.6);
+  font: 700 clamp(9px, 2.5vw, 28px) Arial, sans-serif;
+  letter-spacing: .2em;
+}
+
+.audio-setting-row {
+  margin-bottom: clamp(26px, 7vw, 82px);
+}
+
+.audio-setting-copy {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: clamp(10px, 2.5vw, 28px);
+}
+
+.audio-setting-copy label {
+  color: #f8e6ad;
+  font-size: clamp(18px, 5.1vw, 58px);
+  font-weight: 800;
+}
+
+.audio-setting-copy output {
+  min-width: 3.2em;
+  color: #dcb54d;
+  font: 700 clamp(12px, 3.4vw, 39px) Arial, sans-serif;
+  text-align: right;
+}
+
+.audio-control-line {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: clamp(12px, 3vw, 35px);
+}
+
+.fantasy-slider {
+  width: 100%;
+  height: clamp(30px, 7vw, 82px);
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.fantasy-slider::-webkit-slider-runnable-track {
+  height: clamp(7px, 1.8vw, 21px);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, #182b37, #08131b);
+  border: 1px solid rgba(230,198,103,.45);
+  box-shadow:
+    inset 0 2px 6px rgba(0,0,0,.65),
+    0 1px 0 rgba(255,255,255,.06);
+}
+
+.fantasy-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: clamp(28px, 7.5vw, 87px);
+  height: clamp(28px, 7.5vw, 87px);
+  margin-top: calc(clamp(7px, 1.8vw, 21px) / 2 - clamp(28px, 7.5vw, 87px) / 2);
+  border-radius: 50%;
+  border: clamp(2px, .45vw, 5px) solid #7f5816;
+  background:
+    radial-gradient(circle at 35% 28%, #fff4ae, #efc34a 46%, #b87816 100%);
+  box-shadow:
+    0 4px 10px rgba(0,0,0,.4),
+    inset 0 1px 1px rgba(255,255,255,.7);
+}
+
+.fantasy-slider::-moz-range-track {
+  height: clamp(7px, 1.8vw, 21px);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #182b37, #08131b);
+  border: 1px solid rgba(230,198,103,.45);
+}
+
+.fantasy-slider::-moz-range-thumb {
+  width: clamp(28px, 7.5vw, 87px);
+  height: clamp(28px, 7.5vw, 87px);
+  border-radius: 50%;
+  border: clamp(2px, .45vw, 5px) solid #7f5816;
+  background: #efc34a;
+  box-shadow: 0 4px 10px rgba(0,0,0,.4);
+}
+
+.audio-mute-button {
+  width: clamp(43px, 11vw, 128px);
+  aspect-ratio: 1;
+  border-radius: clamp(10px, 2.5vw, 29px);
+  border: 2px solid rgba(225,194,99,.55);
+  background: linear-gradient(180deg, rgba(22,40,52,.97), rgba(7,17,24,.98));
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow:
+    0 5px 12px rgba(0,0,0,.3),
+    inset 0 0 15px rgba(255,220,107,.05);
+}
+
+.audio-mute-button.muted {
+  border-color: rgba(207,99,84,.72);
+  background: linear-gradient(180deg, rgba(61,29,29,.95), rgba(24,11,12,.98));
+}
+
+.audio-icon {
+  font-size: clamp(18px, 5.2vw, 60px);
+}
+
+.settings-spacer {
+  flex: 1 1 auto;
+  min-height: clamp(10px, 2vw, 25px);
+}
+
+.settings-play-button,
+.delete-progress-button {
+  width: 100%;
+  min-height: clamp(51px, 13vw, 152px);
+  border-radius: clamp(10px, 2.4vw, 28px);
+  font: 900 clamp(16px, 4.6vw, 53px) Georgia, "Times New Roman", serif;
+  letter-spacing: .04em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-play-button {
+  border: clamp(2px, .55vw, 6px) solid #68400e;
+  color: #42270d;
+  background:
+    linear-gradient(180deg,
+      #fff1a0 0%,
+      #f8ce59 36%,
+      #d59324 72%,
+      #efbc42 100%);
+  box-shadow:
+    0 7px 13px rgba(0,0,0,.35),
+    inset 0 1px 0 rgba(255,255,255,.75);
+  text-shadow: 0 1px 0 rgba(255,255,255,.65);
+}
+
+.delete-progress-button {
+  margin-top: clamp(12px, 3vw, 35px);
+  border: clamp(2px, .5vw, 6px) solid #742925;
+  color: #ffe5df;
+  background:
+    linear-gradient(180deg, #b94b42, #842d29 62%, #6d211f);
+  box-shadow:
+    0 7px 13px rgba(0,0,0,.35),
+    inset 0 1px 0 rgba(255,255,255,.16);
+  text-shadow: 0 2px 3px rgba(0,0,0,.5);
+}
+
+/* Delete confirmation dialogs: also confined to game-stage. */
+.danger-dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(22px, 6vw, 70px);
+  background: rgba(4,8,12,.83);
+  backdrop-filter: blur(9px);
+}
+
+.danger-dialog.open {
+  display: flex;
+  animation: dangerFade .18s ease-out both;
+}
+
+.danger-card {
+  width: 100%;
+  max-width: 900px;
+  padding: clamp(27px, 7vw, 82px) clamp(22px, 6vw, 70px);
+  border-radius: clamp(14px, 3.5vw, 40px);
+  border: clamp(2px, .45vw, 5px) solid #b64d43;
+  background:
+    linear-gradient(180deg, rgba(66,23,23,.98), rgba(20,10,13,.99));
+  color: #fff;
+  text-align: center;
+  box-shadow:
+    0 22px 65px rgba(0,0,0,.62),
+    inset 0 0 30px rgba(255,121,101,.05);
+}
+
+.danger-symbol {
+  width: clamp(54px, 14vw, 164px);
+  aspect-ratio: 1;
+  margin: 0 auto .35em;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: clamp(3px, .65vw, 8px) solid #ef7567;
+  color: #ffb4a9;
+  font: 900 clamp(27px, 7.5vw, 87px) Arial, sans-serif;
+  box-shadow: 0 0 24px rgba(255,76,59,.16);
+}
+
+.danger-card h2 {
+  margin: 0 0 .65em;
+  color: #ffb2a8;
+  font-size: clamp(24px, 6.6vw, 76px);
+  line-height: 1.04;
+  letter-spacing: .025em;
+}
+
+.danger-card p {
+  margin: .55em auto;
+  max-width: 95%;
+  color: rgba(255,255,255,.87);
+  font: 500 clamp(13px, 3.6vw, 41px)/1.38 Arial, sans-serif;
+}
+
+.danger-card .danger-emphasis {
+  color: #ffb0a6;
+  font-weight: 800;
+}
+
+.danger-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(10px, 2.7vw, 31px);
+  margin-top: clamp(23px, 6vw, 70px);
+}
+
+.danger-actions button {
+  min-height: clamp(49px, 12.2vw, 142px);
+  border-radius: clamp(9px, 2.3vw, 27px);
+  font: 900 clamp(14px, 4vw, 46px) Georgia, "Times New Roman", serif;
+  cursor: pointer;
+}
+
+.danger-no {
+  border: 2px solid #89681f;
+  color: #3a2608;
+  background: linear-gradient(180deg, #ffe78a, #d9a832);
+}
+
+.danger-yes {
+  border: 2px solid #9d4038;
+  color: #ffe7e1;
+  background: linear-gradient(180deg, #a54039, #6f2421);
+}
+
+.final-delete {
+  font-size: clamp(11px, 3.25vw, 38px) !important;
+}
+
+@keyframes settingsPanelIn {
+  from { opacity: 0; transform: scale(1.015); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes dangerFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/*
+  Very short displays: keep the configuration panel inside the game area,
+  but tighten vertical spacing rather than enabling page scrolling.
+*/
+@media (max-height: 720px) {
+  .settings-panel-inner {
+    padding-top: 15px;
+    padding-bottom: 13px;
+  }
+
+  .settings-heading {
+    margin-bottom: 14px;
+  }
+
+  .settings-heading h1 {
+    font-size: clamp(24px, 7vw, 70px);
+  }
+
+  .audio-setting-row {
+    margin-bottom: 14px;
+  }
+
+  .settings-play-button,
+  .delete-progress-button {
+    min-height: 44px;
+  }
+}
