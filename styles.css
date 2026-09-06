@@ -953,28 +953,36 @@ audio {
   z-index: 12;
 }
 
+
 /* =========================================================
-   CLEARER EQUIPMENT MENU ICON
+   INTERFACE REFINEMENT — EQUIPMENT / SETTINGS
    ========================================================= */
+
+/* Equipment now uses exactly the same round-button colors and geometry
+   as the other side-menu icons. */
 .equipment-button {
-  background:
-    radial-gradient(
-      circle at 45% 35%,
-      rgba(54,78,91,.98),
-      rgba(5,16,24,.94)
-    );
+  background: rgba(5,16,24,.70);
 }
 
 .equipment-button .equipment-symbol {
-  width: 116%;
-  height: 116%;
-  stroke-width: 4.5;
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  stroke-width: 4;
 }
 
-@media (max-width: 430px) {
-  .equipment-button .equipment-symbol {
-    width: 121%;
-    height: 121%;
-    stroke-width: 4.9;
-  }
+/* The delete button sits above the lower closing area.
+   FECHAR remains isolated at the bottom, matching the other menus. */
+.settings-delete-raised {
+  margin-top: clamp(4px, 1vw, 12px);
+  margin-bottom: clamp(12px, 3vw, 35px);
+}
+
+.settings-panel .settings-play-button {
+  margin-top: 0;
+}
+
+/* Override the old shared delete spacing. */
+.settings-panel .delete-progress-button {
+  margin-top: 0;
 }

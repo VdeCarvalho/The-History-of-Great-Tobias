@@ -375,18 +375,8 @@
 
     if (!item) return;
 
-    const totalQuantity = inventory
-      .filter(slot => slot && slot.itemId === item.itemId)
-      .reduce(
-        (sum, slot) =>
-          sum + Number(slot.quantity || 0),
-        0
-      );
-
     discardQuestion.textContent =
-      `Você tem ${totalQuantity.toLocaleString("pt-BR")} unidade(s) de ${item.name}. ` +
-      `Ao confirmar, TODAS as unidades desse item serão descartadas e perdidas para sempre. ` +
-      `Você tem certeza?`;
+      "Ao confirmar, todas as unidades desse item serão descartadas. Você tem certeza?";
 
     openDanger(discardDialog);
   });
