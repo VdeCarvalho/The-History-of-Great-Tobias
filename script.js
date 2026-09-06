@@ -4,52 +4,94 @@
   const icon = document.getElementById("soundIcon");
   const hint = document.getElementById("soundHint");
   const video = document.getElementById("heroVideo");
+  const playButton = document.getElementById("playButton");
 
-  // ----------------------------------------------------------
-  // VIDEO: Android/iOS back-button / BFCache recovery
-  // ----------------------------------------------------------
-  let videoRecoveryTimer = null;
+  const RELOAD_GUARD = "tobias_back_video_reload_guard";
 
-  async function ensureVideoPlaying() {
+  function navigationWasBackForward(event) {
+    try {
+      const nav = performance.getEntriesByType("navigation")[0];
+      return Boolean(event?.persisted || nav?.type === "back_forward");
+    } catch {
+      return Boolean(event?.persisted);
+    }
+  }
+
+  /*
+    Some mobile browsers restore the page from BFCache with the <video>
+    visually frozen even when play() succeeds.
+
+    Therefore, on an actual Back/Forward restoration we rebuild the page
+    once with a normal reload. The guard prevents any reload loop.
+  */
+  window.addEventListener("pageshow", (event) => {
+    const cameFromHistory = navigationWasBackForward(event);
+    const alreadyReloaded = sessionStorage.getItem(RELOAD_GUARD) === "1";
+
+    if (cameFromHistory && !alreadyReloaded) {
+      sessionStorage.setItem(RELOAD_GUARD, "1");
+      window.location.reload();
+      return;
+    }
+
+    // A reload is now a normal navigation, so release the guard.
+    sessionStorage.removeItem(RELOAD_GUARD);
+
+    restartIntroVideo();
+  });
+
+  async function restartIntroVideo() {
     if (!video) return;
 
-    // Muted inline playback is eligible for autoplay on mobile browsers.
     video.muted = true;
     video.defaultMuted = true;
     video.playsInline = true;
 
     try {
+      // If the browser has left the media pipeline in a bad state,
+      // reload the media element instead of merely calling play().
       if (video.error || video.readyState === 0) {
+        const currentTime = Number.isFinite(video.currentTime)
+          ? video.currentTime
+          : 0;
+
         video.load();
+
+        video.addEventListener(
+          "loadedmetadata",
+          () => {
+            try {
+              if (
+                currentTime > 0 &&
+                currentTime < video.duration
+              ) {
+                video.currentTime = currentTime;
+              }
+            } catch {}
+
+            video.play().catch(() => {});
+          },
+          { once: true }
+        );
+
+        return;
       }
 
-      if (video.paused || video.ended) {
-        await video.play();
-      }
-    } catch (err) {
-      // BFCache restoration can need one render cycle before play() works.
-      clearTimeout(videoRecoveryTimer);
-      videoRecoveryTimer = setTimeout(() => {
+      await video.play();
+    } catch {
+      // Final fallback for delayed mobile rendering.
+      setTimeout(() => {
+        video.load();
         video.play().catch(() => {});
       }, 120);
     }
   }
 
-  function aggressivelyResumeVideo() {
-    ensureVideoPlaying();
-    requestAnimationFrame(() => ensureVideoPlaying());
-    setTimeout(() => ensureVideoPlaying(), 80);
-    setTimeout(() => ensureVideoPlaying(), 260);
-  }
-
-  // pageshow is the important event when the page is restored from
-  // the mobile browser's back/forward cache.
-  window.addEventListener("pageshow", aggressivelyResumeVideo);
-  window.addEventListener("focus", aggressivelyResumeVideo);
+  window.addEventListener("focus", restartIntroVideo);
 
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
-      aggressivelyResumeVideo();
+      restartIntroVideo();
 
       if (soundEnabled && hasUnlockedAudio) {
         music.play().catch(() => {});
@@ -57,21 +99,20 @@
     }
   });
 
-  // Some Chromium builds dispatch pagehide/pageshow without a full reload.
-  window.addEventListener("pagehide", () => {
-    clearTimeout(videoRecoveryTimer);
-  });
-
   video.addEventListener("canplay", () => {
-    if (!document.hidden) ensureVideoPlaying();
+    if (!document.hidden && video.paused) {
+      video.play().catch(() => {});
+    }
   });
 
   // ----------------------------------------------------------
-  // INTRO MUSIC
+  // Music preferences
   // ----------------------------------------------------------
   const storedAudio = (() => {
     try {
-      return JSON.parse(localStorage.getItem("tobias_audio_settings_v1") || "null");
+      return JSON.parse(
+        localStorage.getItem("tobias_audio_settings_v1") || "null"
+      );
     } catch {
       return null;
     }
@@ -84,30 +125,43 @@
 
   let hasUnlockedAudio = false;
 
-  if (storedAudio && Number.isFinite(Number(storedAudio.musicVolume))) {
-    music.volume = Math.max(0, Math.min(1, Number(storedAudio.musicVolume)));
-  } else {
-    music.volume = 0.42;
-  }
+  music.volume =
+    storedAudio &&
+    Number.isFinite(Number(storedAudio.musicVolume))
+      ? Math.max(0, Math.min(1, Number(storedAudio.musicVolume)))
+      : 0.42;
 
-  function persistIntroMuteState() {
+  function persistIntroAudio() {
     let settings = {};
+
     try {
-      settings = JSON.parse(localStorage.getItem("tobias_audio_settings_v1") || "{}") || {};
+      settings =
+        JSON.parse(
+          localStorage.getItem("tobias_audio_settings_v1") || "{}"
+        ) || {};
     } catch {}
 
     settings.musicVolume = music.volume;
     settings.musicMuted = !soundEnabled;
 
-    if (!Number.isFinite(Number(settings.sfxVolume))) settings.sfxVolume = 0.7;
-    if (typeof settings.sfxMuted !== "boolean") settings.sfxMuted = false;
+    if (!Number.isFinite(Number(settings.sfxVolume))) {
+      settings.sfxVolume = 0.7;
+    }
 
-    localStorage.setItem("tobias_audio_settings_v1", JSON.stringify(settings));
+    if (typeof settings.sfxMuted !== "boolean") {
+      settings.sfxMuted = false;
+    }
+
+    localStorage.setItem(
+      "tobias_audio_settings_v1",
+      JSON.stringify(settings)
+    );
   }
 
   function renderSoundState() {
     toggle.classList.toggle("off", !soundEnabled);
     icon.textContent = soundEnabled ? "♪" : "×";
+
     toggle.setAttribute(
       "aria-label",
       soundEnabled ? "Desligar música" : "Ligar música"
@@ -132,7 +186,12 @@
     }
   };
 
-  document.addEventListener("pointerdown", unlockAudio, { passive: true });
+  document.addEventListener(
+    "pointerdown",
+    unlockAudio,
+    { passive: true }
+  );
+
   document.addEventListener("keydown", unlockAudio);
 
   toggle.addEventListener("click", async (event) => {
@@ -140,8 +199,13 @@
     event.stopPropagation();
 
     soundEnabled = !soundEnabled;
-    localStorage.setItem("tobiasMusic", soundEnabled ? "on" : "off");
-    persistIntroMuteState();
+
+    localStorage.setItem(
+      "tobiasMusic",
+      soundEnabled ? "on" : "off"
+    );
+
+    persistIntroAudio();
 
     if (soundEnabled) {
       await startMusic();
@@ -156,8 +220,6 @@
   // ----------------------------------------------------------
   // JOGAR
   // ----------------------------------------------------------
-  const playButton = document.getElementById("playButton");
-
   if (playButton) {
     playButton.addEventListener("click", (event) => {
       event.preventDefault();
@@ -169,15 +231,18 @@
     });
   }
 
-  // Initial playback attempts.
-  aggressivelyResumeVideo();
+  restartIntroVideo();
   startMusic();
 
   setTimeout(() => {
-    if (soundEnabled && music.paused) hint.classList.add("visible");
+    if (soundEnabled && music.paused) {
+      hint.classList.add("visible");
+    }
   }, 1800);
 
-  setTimeout(() => hint.classList.remove("visible"), 6500);
+  setTimeout(() => {
+    hint.classList.remove("visible");
+  }, 6500);
 
   renderSoundState();
 })();

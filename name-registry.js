@@ -1,1 +1,243 @@
-window.TobiasNameRegistry=(()=>{const LK="tobias_registered_names_v1";const cfg=()=>window.TOBIAS_BACKEND||{mode:"local",maxSuffix:99999};const clean=v=>String(v??"").trim().replace(/\s+/g," ");const key=n=>clean(n).toLocaleLowerCase("pt-BR");function validate(n){n=clean(n);if(!n)return"Digite um nome.";if(n.length>30)return"O nome pode ter no máximo 30 caracteres.";return""}function load(){try{const x=JSON.parse(localStorage.getItem(LK)||"[]");return Array.isArray(x)?x:[]}catch{return[]}}function save(x){localStorage.setItem(LK,JSON.stringify(x))}async function localSuggest(base){base=clean(base);const used=new Set(load().map(key));if(!used.has(key(base)))return base;for(let i=1;i<=Number(cfg().maxSuffix||99999);i++){const c=`${base}_${i}`;if(!used.has(key(c)))return c}throw new Error("Não há mais variações disponíveis para esse nome.")}async function localClaim(name){name=clean(name);const a=load();if(a.some(x=>key(x)===key(name)))return false;a.push(name);save(a);return true}function headers(){const c=cfg();return{apikey:c.supabaseAnonKey,Authorization:`Bearer ${c.supabaseAnonKey}`,"Content-Type":"application/json"}}function assertCfg(){const c=cfg();if(!c.supabaseUrl||!c.supabaseAnonKey)throw new Error("O registro global ainda não foi configurado.")}async function rpc(fn,payload){assertCfg();const c=cfg();const r=await fetch(`${c.supabaseUrl.replace(/\/$/,"")}/rest/v1/rpc/${fn}`,{method:"POST",headers:headers(),body:JSON.stringify(payload)});if(!r.ok)throw new Error(await r.text()||`Erro ${r.status}`);return await r.json()}async function supSuggest(base){return await rpc("suggest_username",{requested_name:clean(base)})}async function supClaim(name){assertCfg();const c=cfg(),n=clean(name);const r=await fetch(`${c.supabaseUrl.replace(/\/$/,"")}/rest/v1/players`,{method:"POST",headers:{...headers(),Prefer:"return=minimal"},body:JSON.stringify({username:n,username_key:key(n)})});if(r.ok)return true;const t=await r.text();if(r.status===409||/duplicate|unique|23505/i.test(t))return false;throw new Error(t||`Erro ${r.status}`)}async function suggest(n){return cfg().mode==="supabase"?supSuggest(n):localSuggest(n)}async function claim(n){return cfg().mode==="supabase"?supClaim(n):localClaim(n)}return{cleanName:clean,keyOf:key,validate,suggest,claim}})();
+window.TobiasNameRegistry = (() => {
+  const LOCAL_KEY = "tobias_registered_names_v1";
+
+  const cfg = () =>
+    window.TOBIAS_BACKEND || {
+      mode: "local",
+      supabaseUrl: "",
+      supabaseAnonKey: "",
+      maxSuffix: 99999
+    };
+
+  function cleanName(value) {
+    return String(value ?? "")
+      .trim()
+      .replace(/\s+/g, " ");
+  }
+
+  function keyOf(name) {
+    return cleanName(name).toLocaleLowerCase("pt-BR");
+  }
+
+  function validate(name) {
+    const cleaned = cleanName(name);
+
+    if (!cleaned) {
+      return "Digite um nome.";
+    }
+
+    if (cleaned.length > 30) {
+      return "O nome pode ter no máximo 30 caracteres.";
+    }
+
+    return "";
+  }
+
+  function loadLocal() {
+    try {
+      const value = JSON.parse(
+        localStorage.getItem(LOCAL_KEY) || "[]"
+      );
+
+      return Array.isArray(value) ? value : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveLocal(names) {
+    localStorage.setItem(
+      LOCAL_KEY,
+      JSON.stringify(names)
+    );
+  }
+
+  async function localSuggest(base) {
+    base = cleanName(base);
+
+    const used = new Set(
+      loadLocal().map(keyOf)
+    );
+
+    if (!used.has(keyOf(base))) {
+      return base;
+    }
+
+    const maxSuffix =
+      Number(cfg().maxSuffix) || 99999;
+
+    for (let i = 1; i <= maxSuffix; i++) {
+      const candidate = `${base}_${i}`;
+
+      if (!used.has(keyOf(candidate))) {
+        return candidate;
+      }
+    }
+
+    throw new Error(
+      "Não há mais variações disponíveis para esse nome."
+    );
+  }
+
+  async function localClaim(name) {
+    const cleaned = cleanName(name);
+    const names = loadLocal();
+    const wanted = keyOf(cleaned);
+
+    if (
+      names.some(
+        existing => keyOf(existing) === wanted
+      )
+    ) {
+      return false;
+    }
+
+    names.push(cleaned);
+    saveLocal(names);
+
+    return true;
+  }
+
+  async function localRelease(name) {
+    const wanted = keyOf(name);
+    const names = loadLocal();
+
+    const remaining = names.filter(
+      existing => keyOf(existing) !== wanted
+    );
+
+    saveLocal(remaining);
+
+    return remaining.length !== names.length;
+  }
+
+  function headers() {
+    const c = cfg();
+
+    return {
+      apikey: c.supabaseAnonKey,
+      Authorization: `Bearer ${c.supabaseAnonKey}`,
+      "Content-Type": "application/json"
+    };
+  }
+
+  function assertSupabaseConfigured() {
+    const c = cfg();
+
+    if (!c.supabaseUrl || !c.supabaseAnonKey) {
+      throw new Error(
+        "O registro global ainda não foi configurado."
+      );
+    }
+  }
+
+  async function rpc(functionName, payload) {
+    assertSupabaseConfigured();
+
+    const c = cfg();
+
+    const response = await fetch(
+      `${c.supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/${functionName}`,
+      {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify(payload)
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        (await response.text()) ||
+        `Erro ${response.status}`
+      );
+    }
+
+    return await response.json();
+  }
+
+  async function supabaseSuggest(base) {
+    return await rpc(
+      "suggest_username",
+      {
+        requested_name: cleanName(base)
+      }
+    );
+  }
+
+  async function supabaseClaim(name) {
+    assertSupabaseConfigured();
+
+    const c = cfg();
+    const cleaned = cleanName(name);
+
+    const response = await fetch(
+      `${c.supabaseUrl.replace(/\/$/, "")}/rest/v1/players`,
+      {
+        method: "POST",
+        headers: {
+          ...headers(),
+          Prefer: "return=minimal"
+        },
+        body: JSON.stringify({
+          username: cleaned,
+          username_key: keyOf(cleaned)
+        })
+      }
+    );
+
+    if (response.ok) {
+      return true;
+    }
+
+    const body = await response.text();
+
+    if (
+      response.status === 409 ||
+      /duplicate|unique|23505/i.test(body)
+    ) {
+      return false;
+    }
+
+    throw new Error(
+      body || `Erro ${response.status}`
+    );
+  }
+
+  async function supabaseRelease(name) {
+    return Boolean(
+      await rpc(
+        "release_username",
+        {
+          requested_name: cleanName(name)
+        }
+      )
+    );
+  }
+
+  async function suggest(name) {
+    return cfg().mode === "supabase"
+      ? supabaseSuggest(name)
+      : localSuggest(name);
+  }
+
+  async function claim(name) {
+    return cfg().mode === "supabase"
+      ? supabaseClaim(name)
+      : localClaim(name);
+  }
+
+  async function release(name) {
+    return cfg().mode === "supabase"
+      ? supabaseRelease(name)
+      : localRelease(name);
+  }
+
+  return {
+    cleanName,
+    keyOf,
+    validate,
+    suggest,
+    claim,
+    release
+  };
+})();

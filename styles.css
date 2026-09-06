@@ -561,3 +561,17 @@ audio {
     min-height: 44px;
   }
 }
+
+
+/* =========================================================
+   CORREÇÃO — PÁGINA DO JOGO SEM FILME / CENÁRIO PROVISÓRIO
+   ========================================================= */
+.game-page .gameplay-stage {
+  background: #0d1b26;
+}
+
+.game-page .game-background-video,
+.game-page .gameplay-shade,
+.game-page .player-chip {
+  display: none !important;
+}
