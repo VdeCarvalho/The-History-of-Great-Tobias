@@ -7,6 +7,35 @@
   const playButton = document.getElementById("playButton");
 
   const RELOAD_GUARD = "tobias_back_video_reload_guard";
+  const MUSIC_POSITION_KEY = "tobias_music_position_v1";
+
+  function rememberMusicPosition() {
+    if (!music) return;
+
+    try {
+      sessionStorage.setItem(
+        MUSIC_POSITION_KEY,
+        String(Number.isFinite(music.currentTime) ? music.currentTime : 0)
+      );
+    } catch {}
+  }
+
+  function restoreMusicPosition() {
+    if (!music) return;
+
+    try {
+      const saved = Number(sessionStorage.getItem(MUSIC_POSITION_KEY));
+
+      if (
+        Number.isFinite(saved) &&
+        saved >= 0 &&
+        Number.isFinite(music.duration) &&
+        music.duration > 0
+      ) {
+        music.currentTime = saved % music.duration;
+      }
+    } catch {}
+  }
 
   function navigationWasBackForward(event) {
     try {
@@ -168,6 +197,9 @@
     );
   }
 
+  music.addEventListener("loadedmetadata", restoreMusicPosition);
+  music.addEventListener("timeupdate", rememberMusicPosition);
+
   async function startMusic() {
     if (!soundEnabled) return;
 
@@ -223,6 +255,8 @@
   if (playButton) {
     playButton.addEventListener("click", (event) => {
       event.preventDefault();
+
+      rememberMusicPosition();
 
       window.location.href =
         window.TobiasSave && TobiasSave.exists()

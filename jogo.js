@@ -375,8 +375,18 @@
 
     if (!item) return;
 
+    const totalQuantity = inventory
+      .filter(slot => slot && slot.itemId === item.itemId)
+      .reduce(
+        (sum, slot) =>
+          sum + Number(slot.quantity || 0),
+        0
+      );
+
     discardQuestion.textContent =
-      `Você tem certeza que quer descartar ${item.name}?`;
+      `Você tem ${totalQuantity.toLocaleString("pt-BR")} unidade(s) de ${item.name}. ` +
+      `Ao confirmar, TODAS as unidades desse item serão descartadas e perdidas para sempre. ` +
+      `Você tem certeza?`;
 
     openDanger(discardDialog);
   });
@@ -395,9 +405,16 @@
     const item = inventory[selectedInventoryIndex];
 
     if (item) {
-      // Discard removes the whole selected stack.
-      inventory.splice(selectedInventoryIndex, 1);
-      TobiasSave.saveInventory(inventory);
+      const remainingInventory =
+        inventory.filter(
+          slot =>
+            !slot ||
+            slot.itemId !== item.itemId
+        );
+
+      TobiasSave.saveInventory(
+        remainingInventory
+      );
     }
 
     selectedInventoryIndex = null;

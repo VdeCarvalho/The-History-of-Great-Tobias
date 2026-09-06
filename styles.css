@@ -944,3 +944,37 @@ audio {
     margin-bottom: 8px;
   }
 }
+
+
+/* =========================================================
+   NAME SCREEN MUSIC
+   ========================================================= */
+.name-sound-toggle {
+  z-index: 12;
+}
+
+/* =========================================================
+   CLEARER EQUIPMENT MENU ICON
+   ========================================================= */
+.equipment-button {
+  background:
+    radial-gradient(
+      circle at 45% 35%,
+      rgba(54,78,91,.98),
+      rgba(5,16,24,.94)
+    );
+}
+
+.equipment-button .equipment-symbol {
+  width: 116%;
+  height: 116%;
+  stroke-width: 4.5;
+}
+
+@media (max-width: 430px) {
+  .equipment-button .equipment-symbol {
+    width: 121%;
+    height: 121%;
+    stroke-width: 4.9;
+  }
+}
