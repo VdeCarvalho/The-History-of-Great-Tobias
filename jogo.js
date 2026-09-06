@@ -23,6 +23,7 @@
   const inventoryPanel = document.getElementById("inventoryPanel");
 
   const gameMusic = document.getElementById("gameMusic");
+  const uiClickSound = document.getElementById("uiClickSound");
   const closeSettings = document.getElementById("closeSettings");
 
   const musicSlider = document.getElementById("musicVolume");
@@ -324,6 +325,13 @@
     equipItem.style.display =
       item.equippable ? "" : "none";
 
+    document
+      .getElementById("itemActions")
+      .classList.toggle(
+        "single-action",
+        !item.equippable
+      );
+
     showPanel(itemDetailPanel);
   }
 
@@ -466,6 +474,52 @@
       );
     }
   });
+
+  // ----------------------------------------------------------
+  // UI interaction sound
+  // ----------------------------------------------------------
+  function playUiClick() {
+    if (!uiClickSound) return;
+    if (audio.sfxMuted) return;
+
+    uiClickSound.volume =
+      Math.max(
+        0,
+        Math.min(1, audio.sfxVolume)
+      );
+
+    try {
+      uiClickSound.currentTime = 0;
+    } catch {}
+
+    uiClickSound.play().catch(() => {});
+  }
+
+  /*
+    Play the interface sound only for real interactive controls,
+    not for arbitrary taps on the screen.
+  */
+  document.addEventListener(
+    "click",
+    event => {
+      const control = event.target.closest(
+        "button, a[href], input[type='range']"
+      );
+
+      if (!control) return;
+
+      // Range sliders already provide continuous tactile interaction,
+      // so avoid spamming the sound while dragging them.
+      if (
+        control.matches("input[type='range']")
+      ) {
+        return;
+      }
+
+      playUiClick();
+    },
+    true
+  );
 
   // ----------------------------------------------------------
   // Lifecycle

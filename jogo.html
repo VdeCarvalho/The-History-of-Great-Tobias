@@ -48,13 +48,15 @@
           title="Equipamentos"
         >
           <svg class="equipment-symbol" viewBox="0 0 64 64" aria-hidden="true">
-            <!-- Simple medieval sword -->
-            <path d="M44 8L24 40"/>
-            <path d="M41 7l8-2-2 8"/>
-            <path d="M19 36l10 7"/>
-            <path d="M18 43l6-9"/>
-            <path d="M14 50l8-8"/>
-            <path d="M12 53l5-1 1-5"/>
+            <!-- Broad medieval sword -->
+            <path d="M32 5l7 8-4 28H29l-4-28z"/>
+            <path d="M25 13h14"/>
+            <path d="M23 41h18"/>
+            <path d="M27 41v7h10v-7"/>
+            <path d="M25 48h14"/>
+            <path d="M32 48v8"/>
+            <path d="M28 56h8"/>
+            <path d="M32 8v29"/>
           </svg>
         </button>
 
@@ -171,11 +173,11 @@
           <div class="item-detail-quantity" id="detailQuantity"></div>
 
           <div class="item-actions" id="itemActions">
-            <button class="item-equip-button" id="equipItem" type="button">
-              EQUIPAR
-            </button>
             <button class="item-discard-button" id="discardItem" type="button">
               DESCARTAR
+            </button>
+            <button class="item-equip-button" id="equipItem" type="button">
+              EQUIPAR
             </button>
           </div>
 
@@ -268,6 +270,8 @@
             </div>
           </div>
 
+          <div class="settings-delete-spacer-top"></div>
+
           <button class="delete-progress-button settings-delete-raised" id="deleteProgress" type="button">
             DELETAR PROGRESSO
           </button>
@@ -319,6 +323,7 @@
       </section>
 
       <audio id="gameMusic" src="tobias_theme.mp3" loop preload="auto"></audio>
+      <audio id="uiClickSound" src="ui_click.mp3" preload="auto"></audio>
 
     </section>
   </main>

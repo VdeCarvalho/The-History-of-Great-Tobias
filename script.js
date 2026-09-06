@@ -4,6 +4,7 @@
   const icon = document.getElementById("soundIcon");
   const hint = document.getElementById("soundHint");
   const video = document.getElementById("heroVideo");
+  const uiClickSound = document.getElementById("uiClickSound");
   const playButton = document.getElementById("playButton");
 
   const RELOAD_GUARD = "tobias_back_video_reload_guard";
@@ -248,6 +249,44 @@
 
     renderSoundState();
   });
+
+  function playUiClick() {
+    if (!uiClickSound) return;
+
+    let settings = {};
+    try {
+      settings = JSON.parse(
+        localStorage.getItem("tobias_audio_settings_v1") || "{}"
+      ) || {};
+    } catch {}
+
+    if (settings.sfxMuted === true) return;
+
+    uiClickSound.volume =
+      Number.isFinite(Number(settings.sfxVolume))
+        ? Math.max(0, Math.min(1, Number(settings.sfxVolume)))
+        : 0.7;
+
+    try {
+      uiClickSound.currentTime = 0;
+    } catch {}
+
+    uiClickSound.play().catch(() => {});
+  }
+
+  document.addEventListener(
+    "click",
+    event => {
+      const control = event.target.closest(
+        "button, a[href]"
+      );
+
+      if (control) {
+        playUiClick();
+      }
+    },
+    true
+  );
 
   // ----------------------------------------------------------
   // JOGAR

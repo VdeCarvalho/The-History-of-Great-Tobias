@@ -986,3 +986,65 @@ audio {
 .settings-panel .delete-progress-button {
   margin-top: 0;
 }
+
+
+/* =========================================================
+   ITEM ACTION ORDER
+   ========================================================= */
+.item-actions {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* DESCARTAR is always the left action. */
+.item-discard-button {
+  grid-column: 1;
+}
+
+/* EQUIPAR, when available, is always on the right. */
+.item-equip-button {
+  grid-column: 2;
+}
+
+/* Non-equippable items still keep DESCARTAR on the left. */
+.item-actions.single-action .item-discard-button {
+  grid-column: 1;
+}
+
+.item-actions.single-action .item-equip-button {
+  display: none !important;
+}
+
+/* =========================================================
+   EQUIPMENT ICON — BROAD MEDIEVAL SWORD
+   ========================================================= */
+.equipment-button .equipment-symbol {
+  width: 86%;
+  height: 86%;
+  stroke: currentColor;
+  stroke-width: 3.8;
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Keep the round button exactly identical to the others. */
+.equipment-button {
+  background: rgba(5,16,24,.70);
+}
+
+/* =========================================================
+   SETTINGS — DELETE BUTTON POSITION
+   ========================================================= */
+.settings-delete-spacer-top {
+  flex: .52 1 0;
+  min-height: clamp(18px,4.5vw,52px);
+}
+
+.settings-spacer {
+  flex: .90 1 0;
+}
+
+/* Small visual separation around the destructive action. */
+.settings-delete-raised {
+  margin-top: 0;
+  margin-bottom: clamp(10px,2.4vw,28px);
+}

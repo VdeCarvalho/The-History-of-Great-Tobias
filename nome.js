@@ -11,6 +11,7 @@
   const nameMusic = document.getElementById("nameMusic");
   const nameSoundToggle = document.getElementById("nameSoundToggle");
   const nameSoundIcon = document.getElementById("nameSoundIcon");
+  const uiClickSound = document.getElementById("uiClickSound");
 
   const AUDIO_KEY = "tobias_audio_settings_v1";
   const MUSIC_POSITION_KEY = "tobias_music_position_v1";
@@ -189,6 +190,44 @@
         startMusic();
       }
     }
+  );
+
+  function playUiClick() {
+    if (!uiClickSound) return;
+
+    let s = {};
+    try {
+      s = JSON.parse(
+        localStorage.getItem(AUDIO_KEY) || "{}"
+      ) || {};
+    } catch {}
+
+    if (s.sfxMuted === true) return;
+
+    uiClickSound.volume =
+      Number.isFinite(Number(s.sfxVolume))
+        ? Math.max(0, Math.min(1, Number(s.sfxVolume)))
+        : 0.7;
+
+    try {
+      uiClickSound.currentTime = 0;
+    } catch {}
+
+    uiClickSound.play().catch(() => {});
+  }
+
+  document.addEventListener(
+    "click",
+    event => {
+      const control = event.target.closest(
+        "button, a[href]"
+      );
+
+      if (control) {
+        playUiClick();
+      }
+    },
+    true
   );
 
   // ----------------------------------------------------------
