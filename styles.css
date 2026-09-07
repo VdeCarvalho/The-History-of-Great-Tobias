@@ -1420,3 +1420,267 @@ body.chat-keyboard-open .game-stage {
     height: 38px;
   }
 }
+
+
+/* =========================================================
+   CHAT — FIXED USER COLORS
+   ========================================================= */
+
+/*
+  The actual color is calculated deterministically in jogo.js.
+  A subtle accent reuses that same color without changing message text.
+*/
+.chat-message {
+  border-left:
+    clamp(2px,.55vw,6px)
+    solid
+    color-mix(
+      in srgb,
+      var(--chat-user-color, #f2cd67) 72%,
+      transparent
+    );
+}
+
+.chat-message-meta strong {
+  /*
+    Inline JS color intentionally overrides the old global gold color.
+    This fallback is used only before JS paints it.
+  */
+  color: #f2cd67;
+}
+
+/* =========================================================
+   TOBIAS CUSTOM EMOTICONS
+   ========================================================= */
+.tobias-emoji-picker {
+  flex: 0 0 auto;
+  display: none;
+  margin-top:
+    clamp(7px,1.8vw,21px);
+  padding:
+    clamp(9px,2.2vw,26px);
+  border:
+    1px solid
+    rgba(231,199,100,.42);
+  border-radius:
+    clamp(10px,2.4vw,28px);
+  background:
+    rgba(4,13,20,.96);
+  box-shadow:
+    0 8px 25px rgba(0,0,0,.28);
+}
+
+.tobias-emoji-picker.open {
+  display: block;
+}
+
+.tobias-emoji-picker-title {
+  margin-bottom:
+    clamp(7px,1.8vw,21px);
+  color: #e9c968;
+  font:
+    900 clamp(9px,2.35vw,27px)
+    Arial,
+    sans-serif;
+  letter-spacing: .11em;
+  text-align: center;
+}
+
+.tobias-emoji-options {
+  display: grid;
+  grid-template-columns:
+    repeat(5, minmax(0,1fr));
+  gap:
+    clamp(5px,1.3vw,15px);
+}
+
+.tobias-emoji-option {
+  min-width: 0;
+  border:
+    1px solid
+    rgba(221,191,101,.25);
+  border-radius:
+    clamp(8px,2vw,23px);
+  background:
+    rgba(21,36,46,.86);
+  padding:
+    clamp(4px,1.1vw,13px);
+  color: #f5e8bd;
+  cursor: pointer;
+  -webkit-tap-highlight-color:
+    transparent;
+}
+
+.tobias-emoji-option:active {
+  transform: scale(.95);
+}
+
+.tobias-emoji-option img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.tobias-emoji-option span {
+  display: block;
+  margin-top: .2em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font:
+    700 clamp(7px,1.65vw,19px)
+    Arial,
+    sans-serif;
+}
+
+.chat-compose {
+  grid-template-columns:
+    auto 1fr auto;
+}
+
+.tobias-emoji-toggle {
+  width:
+    clamp(46px,11.5vw,135px);
+  aspect-ratio: 1;
+  min-height: 0;
+  padding: 4%;
+  border-radius:
+    clamp(9px,2.2vw,25px);
+  border:
+    clamp(2px,.4vw,5px)
+    solid #725010;
+  background:
+    linear-gradient(
+      180deg,
+      #fff0a0,
+      #efbd3e 62%,
+      #c98719
+    );
+  cursor: pointer;
+}
+
+.tobias-emoji-toggle img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.chat-emoji-draft {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap:
+    clamp(5px,1.2vw,14px);
+  overflow-x: auto;
+  min-height:
+    clamp(48px,11vw,128px);
+  margin-top:
+    clamp(7px,1.8vw,21px);
+  padding:
+    clamp(5px,1.2vw,14px);
+  border-radius:
+    clamp(8px,2vw,23px);
+  background:
+    rgba(2,10,16,.42);
+}
+
+.chat-emoji-draft[hidden] {
+  display: none;
+}
+
+.chat-emoji-draft-chip {
+  position: relative;
+  flex: 0 0 auto;
+  width:
+    clamp(42px,9.5vw,111px);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.chat-emoji-draft-chip img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.chat-emoji-draft-chip span {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 1.25em;
+  height: 1.25em;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(97,26,24,.95);
+  color: #fff;
+  font:
+    900 clamp(10px,2.5vw,28px)
+    Arial,
+    sans-serif;
+}
+
+.chat-custom-emoji {
+  display: inline-block;
+  width:
+    clamp(28px,7vw,82px);
+  height:
+    clamp(28px,7vw,82px);
+  object-fit: contain;
+  vertical-align: middle;
+  margin:
+    0 .08em;
+}
+
+.chat-message p.emoji-only {
+  line-height: 1;
+}
+
+.chat-message p.emoji-only
+.chat-custom-emoji {
+  width:
+    clamp(48px,12vw,140px);
+  height:
+    clamp(48px,12vw,140px);
+}
+
+/* Picker never competes with the mobile keyboard. */
+body.chat-keyboard-open
+.tobias-emoji-picker {
+  display: none !important;
+}
+
+body.chat-keyboard-open
+.chat-emoji-draft {
+  min-height: 38px;
+  margin-top: 3px;
+  padding: 2px 4px;
+}
+
+body.chat-keyboard-open
+.chat-emoji-draft-chip {
+  width: 34px;
+}
+
+body.chat-keyboard-open
+.tobias-emoji-toggle {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+}
+
+@media (max-width: 430px) {
+  .tobias-emoji-option span {
+    display: none;
+  }
+
+  .tobias-emoji-options {
+    gap: 4px;
+  }
+}

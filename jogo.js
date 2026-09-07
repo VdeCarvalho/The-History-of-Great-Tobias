@@ -20,6 +20,10 @@
   const chatInput = document.getElementById("chatInput");
   const chatSend = document.getElementById("chatSend");
   const chatStatus = document.getElementById("chatStatus");
+  const tobiasEmojiToggle = document.getElementById("tobiasEmojiToggle");
+  const tobiasEmojiPicker = document.getElementById("tobiasEmojiPicker");
+  const chatEmojiDraft = document.getElementById("chatEmojiDraft");
+
 
 
   const settingsToggle = document.getElementById("settingsToggle");
@@ -95,6 +99,240 @@
   let realtimeClient = null;
   let realtimeChannel = null;
   let currentChatMessages = [];
+
+
+  const CHAT_USER_COLORS = [
+    "#F3C65C",
+    "#65C7FF",
+    "#FF7F96",
+    "#83E37C",
+    "#C89AFF",
+    "#FFAA5C",
+    "#5ED9CB",
+    "#F184D8",
+    "#9DB8FF",
+    "#E6DC70",
+    "#77E5A3",
+    "#FF9476",
+    "#A9A2FF",
+    "#61D7F2",
+    "#EFA667",
+    "#ED86A8",
+    "#A5DB67",
+    "#DDA2FF",
+    "#80C5A4",
+    "#F1B76E"
+  ];
+
+  const TOBIAS_EMOJIS = {
+    ":tobias_nervoso:": {
+      src: "tobias_nervoso.svg",
+      label: "Tobias nervoso"
+    },
+    ":tobias_apaixonado:": {
+      src: "tobias_apaixonado.svg",
+      label: "Tobias apaixonado"
+    },
+    ":tobias_sorridente:": {
+      src: "tobias_sorridente.svg",
+      label: "Tobias sorridente"
+    },
+    ":tobias_chorando:": {
+      src: "tobias_chorando.svg",
+      label: "Tobias chorando"
+    },
+    ":tobias_gargalhada:": {
+      src: "tobias_gargalhada.svg",
+      label: "Tobias dando gargalhada"
+    }
+  };
+
+  let selectedTobiasEmojis = [];
+
+  /*
+    Same username => same color on every device.
+    No database column is needed and repeats are intentionally allowed.
+  */
+  function colorForUsername(username) {
+    const value =
+      String(username || "")
+        .trim()
+        .toLocaleLowerCase("pt-BR");
+
+    let hash = 2166136261;
+
+    for (let i = 0; i < value.length; i++) {
+      hash ^= value.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+
+    return CHAT_USER_COLORS[
+      (hash >>> 0) % CHAT_USER_COLORS.length
+    ];
+  }
+
+  function messageEmojiTokens(body) {
+    return String(body || "").match(
+      /:tobias_(?:nervoso|apaixonado|sorridente|chorando|gargalhada):/g
+    ) || [];
+  }
+
+  function messageIsEmojiOnly(body) {
+    const stripped =
+      String(body || "")
+        .replace(
+          /:tobias_(?:nervoso|apaixonado|sorridente|chorando|gargalhada):/g,
+          ""
+        )
+        .trim();
+
+    return (
+      stripped === "" &&
+      messageEmojiTokens(body).length > 0
+    );
+  }
+
+  function renderMessageContent(container, body) {
+    const source = String(body || "");
+
+    const tokenPattern =
+      /(:tobias_(?:nervoso|apaixonado|sorridente|chorando|gargalhada):)/g;
+
+    const parts = source.split(tokenPattern);
+
+    for (const part of parts) {
+      const emoji = TOBIAS_EMOJIS[part];
+
+      if (emoji) {
+        const image =
+          document.createElement("img");
+
+        image.className =
+          "chat-custom-emoji";
+
+        image.src = emoji.src;
+        image.alt = emoji.label;
+        image.title = emoji.label;
+
+        container.appendChild(image);
+      } else if (part) {
+        container.appendChild(
+          document.createTextNode(part)
+        );
+      }
+    }
+
+    container.classList.toggle(
+      "emoji-only",
+      messageIsEmojiOnly(source)
+    );
+  }
+
+  function renderEmojiDraft() {
+    chatEmojiDraft.innerHTML = "";
+
+    if (!selectedTobiasEmojis.length) {
+      chatEmojiDraft.hidden = true;
+      return;
+    }
+
+    chatEmojiDraft.hidden = false;
+
+    selectedTobiasEmojis.forEach(
+      (token, index) => {
+        const emoji =
+          TOBIAS_EMOJIS[token];
+
+        if (!emoji) return;
+
+        const chip =
+          document.createElement("button");
+
+        chip.type = "button";
+        chip.className =
+          "chat-emoji-draft-chip";
+
+        chip.setAttribute(
+          "aria-label",
+          `Remover ${emoji.label}`
+        );
+
+        const image =
+          document.createElement("img");
+
+        image.src = emoji.src;
+        image.alt = emoji.label;
+
+        const remove =
+          document.createElement("span");
+
+        remove.textContent = "×";
+        remove.setAttribute(
+          "aria-hidden",
+          "true"
+        );
+
+        chip.appendChild(image);
+        chip.appendChild(remove);
+
+        chip.addEventListener(
+          "click",
+          () => {
+            selectedTobiasEmojis.splice(
+              index,
+              1
+            );
+
+            renderEmojiDraft();
+          }
+        );
+
+        chatEmojiDraft.appendChild(chip);
+      }
+    );
+  }
+
+  function closeTobiasEmojiPicker() {
+    tobiasEmojiPicker.classList.remove("open");
+    tobiasEmojiPicker.setAttribute(
+      "aria-hidden",
+      "true"
+    );
+
+    tobiasEmojiToggle.setAttribute(
+      "aria-expanded",
+      "false"
+    );
+  }
+
+  function openTobiasEmojiPicker() {
+    if (
+      document.activeElement ===
+      chatInput
+    ) {
+      chatInput.blur();
+    }
+
+    document.body.classList.remove(
+      "chat-keyboard-open"
+    );
+
+    document.documentElement.style.removeProperty(
+      "--tobias-visible-height"
+    );
+
+    tobiasEmojiPicker.classList.add("open");
+    tobiasEmojiPicker.setAttribute(
+      "aria-hidden",
+      "false"
+    );
+
+    tobiasEmojiToggle.setAttribute(
+      "aria-expanded",
+      "true"
+    );
+  }
+
 
   function backendPublicKey() {
     return (
@@ -297,6 +535,19 @@
         user.textContent =
           message.username || "Jogador";
 
+        const userColor =
+          colorForUsername(
+            message.username
+          );
+
+        user.style.color =
+          userColor;
+
+        row.style.setProperty(
+          "--chat-user-color",
+          userColor
+        );
+
         const time =
           document.createElement("time");
 
@@ -311,8 +562,10 @@
         const body =
           document.createElement("p");
 
-        body.textContent =
-          message.body;
+        renderMessageContent(
+          body,
+          message.body
+        );
 
         row.appendChild(meta);
         row.appendChild(body);
@@ -479,6 +732,57 @@
   }
 
   // ----------------------------------------------------------
+  // TOBIAS EMOTICON PICKER
+  // ----------------------------------------------------------
+  tobiasEmojiToggle.addEventListener(
+    "click",
+    () => {
+      if (
+        tobiasEmojiPicker.classList.contains(
+          "open"
+        )
+      ) {
+        closeTobiasEmojiPicker();
+      } else {
+        openTobiasEmojiPicker();
+      }
+    }
+  );
+
+  document
+    .querySelectorAll(
+      "[data-tobias-emoji]"
+    )
+    .forEach(button => {
+      button.addEventListener(
+        "click",
+        () => {
+          const token =
+            button.dataset.tobiasEmoji;
+
+          if (
+            !TOBIAS_EMOJIS[token] ||
+            selectedTobiasEmojis.length >= 8
+          ) {
+            return;
+          }
+
+          selectedTobiasEmojis.push(
+            token
+          );
+
+          renderEmojiDraft();
+          closeTobiasEmojiPicker();
+        }
+      );
+    });
+
+  chatInput.addEventListener(
+    "focus",
+    closeTobiasEmojiPicker
+  );
+
+  // ----------------------------------------------------------
   // MOBILE KEYBOARD / VISUAL VIEWPORT
   // ----------------------------------------------------------
   function updateChatVisibleViewport() {
@@ -603,6 +907,11 @@
         "--tobias-visible-height"
       );
 
+      closeTobiasEmojiPicker();
+
+      selectedTobiasEmojis = [];
+      renderEmojiDraft();
+
       await disconnectRealtimeChat();
       hidePanel(chatPanel);
     }
@@ -613,10 +922,30 @@
     async event => {
       event.preventDefault();
 
-      const body =
+      const typedText =
         chatInput.value.trim();
 
+      const emojiText =
+        selectedTobiasEmojis.join(" ");
+
+      const body =
+        [typedText, emojiText]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+
       if (!body) return;
+
+      if (body.length > 500) {
+        chatStatus.textContent =
+          "MENSAGEM MUITO LONGA";
+
+        return;
+      }
+
+      const keyboardWasOpen =
+        document.activeElement ===
+        chatInput;
 
       chatSend.disabled = true;
 
@@ -624,7 +953,14 @@
         await sendChatMessage(body);
 
         chatInput.value = "";
-        chatInput.focus();
+
+        selectedTobiasEmojis = [];
+        renderEmojiDraft();
+        closeTobiasEmojiPicker();
+
+        if (keyboardWasOpen) {
+          chatInput.focus();
+        }
       } catch (error) {
         console.error(error);
 

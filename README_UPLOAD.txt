@@ -420,3 +420,46 @@ When the message input receives focus:
 - ENVIAR remains visible.
 - FECHAR remains visible.
 - the input uses 16px text while focused to prevent iOS auto-zoom.
+
+
+============================================================
+CHAT — USER COLORS + TOBIAS EMOTICONS
+============================================================
+
+USER COLORS
+-----------
+Every username receives a deterministic fixed color based on the username
+text itself.
+
+This means:
+- Tobias always receives the same chat color.
+- Amanda always receives the same chat color.
+- the color is the same on different devices.
+- colors can intentionally repeat for different users.
+
+No database migration is required.
+
+TOBIAS EMOTICONS
+----------------
+Five custom game emoticons were added:
+- Nervoso
+- Apaixonado
+- Sorridente
+- Chorando
+- Gargalhada
+
+Assets:
+- tobias_nervoso.svg
+- tobias_apaixonado.svg
+- tobias_sorridente.svg
+- tobias_chorando.svg
+- tobias_gargalhada.svg
+
+The Chat composer has a dedicated Tobias emoticon button.
+Opening it displays these five options first.
+
+A website cannot modify the Android/iOS native emoji keyboard ordering,
+so the custom in-game picker is used instead.
+
+Selected Tobias emoticons are stored in messages as safe text tokens and
+rendered back as inline images for every user/device.

@@ -120,7 +120,45 @@
 
           <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
 
+          <section class="tobias-emoji-picker" id="tobiasEmojiPicker" aria-hidden="true">
+            <div class="tobias-emoji-picker-title">EMOTICONS DO TOBIAS</div>
+            <div class="tobias-emoji-options">
+              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_nervoso:" aria-label="Tobias nervoso">
+                <img src="tobias_nervoso.svg" alt="">
+                <span>Nervoso</span>
+              </button>
+              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_apaixonado:" aria-label="Tobias apaixonado">
+                <img src="tobias_apaixonado.svg" alt="">
+                <span>Apaixonado</span>
+              </button>
+              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_sorridente:" aria-label="Tobias sorridente">
+                <img src="tobias_sorridente.svg" alt="">
+                <span>Sorridente</span>
+              </button>
+              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_chorando:" aria-label="Tobias chorando">
+                <img src="tobias_chorando.svg" alt="">
+                <span>Chorando</span>
+              </button>
+              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_gargalhada:" aria-label="Tobias dando gargalhada">
+                <img src="tobias_gargalhada.svg" alt="">
+                <span>Gargalhada</span>
+              </button>
+            </div>
+          </section>
+
+          <div class="chat-emoji-draft" id="chatEmojiDraft" hidden aria-label="Emoticons selecionados"></div>
+
           <form class="chat-compose" id="chatForm" autocomplete="off">
+            <button
+              class="tobias-emoji-toggle"
+              id="tobiasEmojiToggle"
+              type="button"
+              aria-label="Abrir emoticons do Tobias"
+              aria-expanded="false"
+            >
+              <img src="tobias_sorridente.svg" alt="">
+            </button>
+
             <input
               id="chatInput"
               class="chat-input"
@@ -130,6 +168,7 @@
               enterkeyhint="send"
               aria-label="Mensagem do chat"
             >
+
             <button class="chat-send-button" id="chatSend" type="submit">
               ENVIAR
             </button>
