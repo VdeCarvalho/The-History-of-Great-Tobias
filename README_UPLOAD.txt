@@ -539,3 +539,13 @@ Sending is now more robust:
 
 Opening Chat never focuses the input automatically.
 The keyboard appears only after tapping the message field.
+
+
+============================================================
+CHAT TITLE BEHAVIOR
+============================================================
+
+- Normal chat view: CHAT title is visible at the top.
+- While the player is typing / mobile keyboard is open:
+  CHAT title disappears to free vertical space for messages.
+- No other chat behavior was changed.

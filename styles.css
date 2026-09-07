@@ -1795,3 +1795,21 @@ body.chat-keyboard-open
 .chat-runtime-status {
   display: none !important;
 }
+
+
+/* =========================================================
+   CHAT TITLE — VISIBLE NORMALLY, HIDDEN WHILE TYPING
+   ========================================================= */
+
+/* Restore the standard chat heading in the normal reading view. */
+.chat-panel .chat-heading {
+  display: block !important;
+  flex: 0 0 auto;
+  margin-bottom: clamp(12px,3vw,35px);
+}
+
+/* While the mobile keyboard/input mode is active, reclaim that space
+   entirely for messages + composer controls. */
+body.chat-keyboard-open .chat-panel .chat-heading {
+  display: none !important;
+}
