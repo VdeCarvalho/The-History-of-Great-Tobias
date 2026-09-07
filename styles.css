@@ -1767,14 +1767,6 @@ body.chat-keyboard-open
 .chat-heading, .chat-panel .panel-heading.chat-heading { display:none !important; }
 
 
-/* =========================================================
-   CHAT REPAIR — NO TOP TITLE
-   ========================================================= */
-.chat-panel .chat-heading,
-.chat-panel > h1,
-.chat-panel-inner > h1 {
-  display: none !important;
-}
 
 .chat-panel-inner {
   /*
@@ -1812,4 +1804,34 @@ body.chat-keyboard-open
    entirely for messages + composer controls. */
 body.chat-keyboard-open .chat-panel .chat-heading {
   display: none !important;
+}
+
+
+/* =========================================================
+   CHAT TITLE — FINAL BEHAVIOR
+   ========================================================= */
+
+/* Normal chat view: show title exactly like other menu headings. */
+body.game-page
+.gameplay-stage
+.chat-panel.open
+.chat-panel-inner
+.panel-heading.chat-heading {
+  display: block !important;
+  flex: 0 0 auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  margin-bottom: clamp(12px,3vw,35px) !important;
+}
+
+/* Only while the player is typing / keyboard is open: hide the title. */
+body.game-page.chat-keyboard-open
+.gameplay-stage
+.chat-panel.open
+.chat-panel-inner
+.panel-heading.chat-heading {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  margin: 0 !important;
 }
