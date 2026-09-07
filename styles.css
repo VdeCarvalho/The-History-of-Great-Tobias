@@ -1762,3 +1762,36 @@ body.chat-keyboard-open
   visibility: visible !important;
   pointer-events: auto !important;
 }
+
+
+.chat-heading, .chat-panel .panel-heading.chat-heading { display:none !important; }
+
+
+/* =========================================================
+   CHAT REPAIR — NO TOP TITLE
+   ========================================================= */
+.chat-panel .chat-heading,
+.chat-panel > h1,
+.chat-panel-inner > h1 {
+  display: none !important;
+}
+
+.chat-panel-inner {
+  /*
+    No title/header consumes vertical space anymore.
+    Messages receive the full flexible area above composer + close.
+  */
+  padding-top:
+    clamp(10px,2.6vw,30px);
+}
+
+body.chat-keyboard-open
+.chat-panel-inner {
+  padding-top:
+    clamp(3px,.8vw,7px);
+}
+
+/* The technical connection status never occupies layout space. */
+.chat-runtime-status {
+  display: none !important;
+}

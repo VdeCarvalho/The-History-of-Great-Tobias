@@ -110,39 +110,88 @@
       <section class="chat-panel" id="chatPanel" aria-hidden="true">
         <div class="chat-panel-inner">
 
-          <div class="panel-heading chat-heading">
-            <div class="settings-diamond">◆</div>
-            <h1>CHAT</h1>
-          </div>
+          <!-- Estado técnico não ocupa espaço visual. -->
+          <span
+            id="chatStatus"
+            class="chat-runtime-status"
+            aria-live="polite"
+            hidden
+          ></span>
 
-          <!-- Estado técnico mantido apenas para acessibilidade/diagnóstico. -->
-          <span id="chatStatus" class="chat-runtime-status" aria-live="polite" hidden></span>
+          <div
+            class="chat-messages"
+            id="chatMessages"
+            aria-live="polite"
+            aria-label="Mensagens do chat"
+          ></div>
 
-          <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+          <section
+            class="tobias-emoji-picker"
+            id="tobiasEmojiPicker"
+            aria-hidden="true"
+          >
+            <div class="tobias-emoji-options">
 
-          <section class="tobias-emoji-picker" id="tobiasEmojiPicker" aria-hidden="true">
-<div class="tobias-emoji-options">
-              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_nervoso:" aria-label="Tobias nervoso">
+              <button
+                type="button"
+                class="tobias-emoji-option"
+                data-tobias-emoji=":tobias_nervoso:"
+                aria-label="Tobias nervoso"
+              >
                 <img src="tobias_nervoso.png" alt="">
               </button>
-              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_apaixonado:" aria-label="Tobias apaixonado">
+
+              <button
+                type="button"
+                class="tobias-emoji-option"
+                data-tobias-emoji=":tobias_apaixonado:"
+                aria-label="Tobias apaixonado"
+              >
                 <img src="tobias_apaixonado.png" alt="">
               </button>
-              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_sorridente:" aria-label="Tobias sorridente">
+
+              <button
+                type="button"
+                class="tobias-emoji-option"
+                data-tobias-emoji=":tobias_sorridente:"
+                aria-label="Tobias sorridente"
+              >
                 <img src="tobias_sorridente.png" alt="">
               </button>
-              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_chorando:" aria-label="Tobias chorando">
+
+              <button
+                type="button"
+                class="tobias-emoji-option"
+                data-tobias-emoji=":tobias_chorando:"
+                aria-label="Tobias chorando"
+              >
                 <img src="tobias_chorando.png" alt="">
               </button>
-              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_gargalhada:" aria-label="Tobias dando gargalhada">
+
+              <button
+                type="button"
+                class="tobias-emoji-option"
+                data-tobias-emoji=":tobias_gargalhada:"
+                aria-label="Tobias dando gargalhada"
+              >
                 <img src="tobias_gargalhada.png" alt="">
               </button>
+
             </div>
           </section>
 
-          <div class="chat-emoji-draft" id="chatEmojiDraft" hidden aria-label="Emoticons selecionados"></div>
+          <div
+            class="chat-emoji-draft"
+            id="chatEmojiDraft"
+            hidden
+            aria-label="Emoticons selecionados"
+          ></div>
 
-          <form class="chat-compose" id="chatForm" autocomplete="off">
+          <form
+            class="chat-compose"
+            id="chatForm"
+            autocomplete="off"
+          >
             <button
               class="tobias-emoji-toggle"
               id="tobiasEmojiToggle"
@@ -163,12 +212,20 @@
               aria-label="Mensagem do chat"
             >
 
-            <button class="chat-send-button" id="chatSend" type="submit">
+            <button
+              class="chat-send-button"
+              id="chatSend"
+              type="submit"
+            >
               ENVIAR
             </button>
           </form>
 
-          <button class="yellow-close-button chat-close" id="closeChat" type="button">
+          <button
+            class="yellow-close-button chat-close"
+            id="closeChat"
+            type="button"
+          >
             FECHAR
           </button>
 

@@ -100,10 +100,11 @@
   let realtimeClient = null;
   let realtimeChannel = null;
   let currentChatMessages = [];
+  let chatRecoveryTimer = null;
 
 
   const CHAT_USER_COLOR_KEY =
-    "tobias_chat_username_colors_v2";
+    "tobias_chat_username_colors_v3";
 
   /*
     Every new username receives the next unused color.
@@ -238,6 +239,31 @@
       "#F2C14E"
     );
   }
+
+  const TOBIAS_EMOJIS = {
+    ":tobias_nervoso:": {
+      src: "tobias_nervoso.png",
+      label: "Tobias nervoso"
+    },
+    ":tobias_apaixonado:": {
+      src: "tobias_apaixonado.png",
+      label: "Tobias apaixonado"
+    },
+    ":tobias_sorridente:": {
+      src: "tobias_sorridente.png",
+      label: "Tobias sorridente"
+    },
+    ":tobias_chorando:": {
+      src: "tobias_chorando.png",
+      label: "Tobias chorando"
+    },
+    ":tobias_gargalhada:": {
+      src: "tobias_gargalhada.png",
+      label: "Tobias dando gargalhada"
+    }
+  };
+
+  let selectedTobiasEmojis = [];
 
   function messageEmojiTokens(body) {
     return String(body || "").match(
@@ -493,31 +519,45 @@
         .trim()
         .replace(/\s+/g, " ");
 
-    if (!cleaned) return false;
+    if (!cleaned) {
+      return null;
+    }
 
     if (!chatUsesGlobalBackend()) {
-      const messages = loadLocalChat();
-
-      messages.push({
+      const message = {
         id: Date.now(),
         username: save.playerName,
         body: cleaned,
         created_at: new Date().toISOString()
-      });
+      };
 
+      const messages = loadLocalChat();
+
+      messages.push(message);
       saveLocalChat(messages);
 
       currentChatMessages =
         messages.slice(-1000);
 
-      renderChat(currentChatMessages, true);
+      renderChat(
+        currentChatMessages,
+        true
+      );
 
-      return true;
+      return message;
     }
 
-    const client = getRealtimeClient();
+    const client =
+      getRealtimeClient();
 
+    /*
+      Return the inserted row immediately.
+      This makes the sender's message appear even if the WebSocket event
+      is delayed or reconnecting. appendRealtimeMessage() prevents duplicates
+      when the same INSERT later arrives through Realtime.
+    */
     const {
+      data,
       error
     } = await client
       .from("chat_messages")
@@ -528,18 +568,21 @@
             .trim()
             .toLocaleLowerCase("pt-BR"),
         body: cleaned
-      });
+      })
+      .select(
+        "id,username,body,created_at"
+      )
+      .single();
 
     if (error) {
       throw error;
     }
 
-    /*
-      Do not append manually here.
-      Supabase Realtime will deliver the INSERT to every connected
-      device, including the sender.
-    */
-    return true;
+    if (data) {
+      appendRealtimeMessage(data);
+    }
+
+    return data || null;
   }
 
   function formatChatTime(value) {
@@ -687,7 +730,64 @@
     );
   }
 
+  async function reconcileChatMessages() {
+    if (
+      !chatPanel.classList.contains(
+        "open"
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const latest =
+        await fetchChatMessages();
+
+      currentChatMessages =
+        latest.slice(-1000);
+
+      renderChat(
+        currentChatMessages,
+        false
+      );
+    } catch (error) {
+      console.warn(
+        "Chat reconciliation failed:",
+        error
+      );
+    }
+  }
+
+  function startChatRecovery() {
+    stopChatRecovery();
+
+    /*
+      Realtime remains the primary transport.
+      This low-frequency reconciliation only repairs a missed event or
+      a temporary WebSocket interruption.
+    */
+    chatRecoveryTimer =
+      window.setInterval(
+        reconcileChatMessages,
+        15000
+      );
+  }
+
+  function stopChatRecovery() {
+    if (
+      chatRecoveryTimer !== null
+    ) {
+      clearInterval(
+        chatRecoveryTimer
+      );
+
+      chatRecoveryTimer = null;
+    }
+  }
+
   async function disconnectRealtimeChat() {
+    stopChatRecovery();
+
     if (
       realtimeClient &&
       realtimeChannel
@@ -782,6 +882,10 @@
   async function openChat() {
     showPanel(chatPanel);
 
+    /*
+      Do not focus the input here.
+      Opening the chat is read-only until the player taps the field.
+    */
     try {
       currentChatMessages =
         await fetchChatMessages();
@@ -791,23 +895,39 @@
         true
       );
 
-      await connectRealtimeChat();
+      /*
+        Realtime is started independently from the initial SELECT.
+        If subscription has a temporary problem, already-loaded messages
+        and sending still work.
+      */
+      try {
+        await connectRealtimeChat();
+      } catch (realtimeError) {
+        console.warn(
+          "Realtime connection failed:",
+          realtimeError
+        );
+      }
+
+      startChatRecovery();
     } catch (error) {
-      console.error(error);
-
-      chatStatus.textContent =
-        "CHAT INDISPONÍVEL";
-
-      chatStatus.classList.add(
-        "error"
+      console.error(
+        "Initial chat load failed:",
+        error
       );
-    }
 
-    /*
-      Não focamos o campo automaticamente.
-      O jogador pode abrir o chat apenas para acompanhar as mensagens.
-      O teclado só aparece quando ele toca no campo de mensagem.
-    */
+      /*
+        Keep the interface usable and retry shortly instead of leaving
+        a permanently empty/broken panel.
+      */
+      currentChatMessages = [];
+      renderChat(
+        currentChatMessages,
+        true
+      );
+
+      startChatRecovery();
+    }
   }
 
   // ----------------------------------------------------------
@@ -1016,9 +1136,6 @@
       if (!body) return;
 
       if (body.length > 500) {
-        chatStatus.textContent =
-          "MENSAGEM MUITO LONGA";
-
         return;
       }
 
@@ -1043,11 +1160,9 @@
       } catch (error) {
         console.error(error);
 
-        chatStatus.textContent =
-          "NÃO FOI POSSÍVEL ENVIAR";
-
-        chatStatus.classList.add(
-          "error"
+        console.error(
+          "Não foi possível enviar a mensagem.",
+          error
         );
       } finally {
         chatSend.disabled = false;

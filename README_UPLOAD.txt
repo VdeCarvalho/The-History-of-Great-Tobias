@@ -505,3 +505,37 @@ If the HUD is hidden, pressing Settings restores the whole HUD instead of
 opening Settings. Once restored, the interface works normally again.
 
 The advertising area is outside the click target and cannot hide the HUD.
+
+
+UPDATE V3
+- Chat title removed from top of chat panel.
+- Restored missing TOBIAS_EMOJIS and selectedTobiasEmojis definitions that had broken sending and emoji rendering.
+- Swapped the five Tobias emoticon assets for newly generated facial-expression portraits.
+- Bumped username-color storage key to v3 so stale all-pink color maps are discarded.
+
+
+UPDATE V4
+- Replaced the five Tobias emoticons with transparent-background PNG versions.
+- Chat panel top title removed.
+- Chat logic kept fixed (TOBIAS_EMOJIS and selectedTobiasEmojis restored; color-map key v3).
+
+
+============================================================
+CHAT REPAIR
+============================================================
+
+A malformed chat HTML structure introduced by a previous UI edit was fixed.
+The entire chat panel was rebuilt with one valid .chat-panel-inner wrapper.
+
+The visible CHAT title was removed completely.
+
+Sending is now more robust:
+- Supabase INSERT returns the newly created row.
+- The sender appends that row immediately.
+- Realtime still delivers new messages to all connected devices.
+- Duplicate INSERT events are ignored by message id.
+- A 15-second low-frequency reconciliation acts only as recovery if a
+  WebSocket event is missed.
+
+Opening Chat never focuses the input automatically.
+The keyboard appears only after tapping the message field.
