@@ -463,3 +463,45 @@ so the custom in-game picker is used instead.
 
 Selected Tobias emoticons are stored in messages as safe text tokens and
 rendered back as inline images for every user/device.
+
+
+============================================================
+UPDATE — DISTINCT CHAT COLORS / ORIGINAL TOBIAS EMOTES / HUD
+============================================================
+
+CHAT COLORS
+-----------
+Different usernames receive different colors until the 32-color palette is
+exhausted. The mapping is stored under:
+  tobias_chat_username_colors_v2
+
+The username text receives a mobile-safe forced color override.
+
+TOBIAS EMOTES
+-------------
+The old drawn SVG faces were removed.
+
+The five PNG emotes are made directly from a still extracted from the game's
+existing tobias_intro.mp4. Tobias's original helmet, face and illustration
+are preserved; only small expression overlays are added.
+
+The picker shows only the five images. No "EMOTICONS DO TOBIAS" title and no
+captions are displayed.
+
+HUD
+---
+When no panel is open, tapping an empty point of the game area fades out:
+- player name
+- chat button
+- inventory
+- equipment
+- discoveries
+
+Fade duration: approximately 1 second.
+
+Settings remains visible.
+
+If the HUD is hidden, pressing Settings restores the whole HUD instead of
+opening Settings. Once restored, the interface works normally again.
+
+The advertising area is outside the click target and cannot hide the HUD.

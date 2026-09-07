@@ -1684,3 +1684,81 @@ body.chat-keyboard-open
     gap: 4px;
   }
 }
+
+
+/* =========================================================
+   EMOTE PICKER — IMAGES ONLY
+   ========================================================= */
+.tobias-emoji-picker-title,
+.tobias-emoji-option span {
+  display: none !important;
+}
+
+.tobias-emoji-picker {
+  padding-top:
+    clamp(7px,1.7vw,20px);
+  padding-bottom:
+    clamp(7px,1.7vw,20px);
+}
+
+.tobias-emoji-option {
+  padding:
+    clamp(3px,.8vw,9px);
+}
+
+.tobias-emoji-option img {
+  border-radius: 22%;
+}
+
+/* =========================================================
+   CHAT USER COLORS — MOBILE-SAFE OVERRIDE
+   ========================================================= */
+.chat-message-meta strong {
+  color:
+    var(
+      --chat-user-color,
+      #F2C14E
+    ) !important;
+
+  -webkit-text-fill-color:
+    var(
+      --chat-user-color,
+      #F2C14E
+    ) !important;
+}
+
+/* =========================================================
+   GAME HUD — ONE-SECOND FADE
+   ========================================================= */
+.gameplay-stage .player-chip,
+.gameplay-stage .game-left-menu,
+.gameplay-stage .inventory-button,
+.gameplay-stage .equipment-button,
+.gameplay-stage .discoveries-button {
+  opacity: 1;
+  visibility: visible;
+
+  transition:
+    opacity 1s ease,
+    visibility 0s linear 0s;
+}
+
+.gameplay-stage.hud-hidden .player-chip,
+.gameplay-stage.hud-hidden .game-left-menu,
+.gameplay-stage.hud-hidden .inventory-button,
+.gameplay-stage.hud-hidden .equipment-button,
+.gameplay-stage.hud-hidden .discoveries-button {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+
+  transition:
+    opacity 1s ease,
+    visibility 0s linear 1s;
+}
+
+.gameplay-stage.hud-hidden .settings-toggle {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}

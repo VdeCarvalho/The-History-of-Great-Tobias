@@ -10,6 +10,7 @@
 
   const AUDIO_KEY = "tobias_audio_settings_v1";
 
+  const gameplayStage = document.getElementById("gameplayStage");
   const playerChip = document.getElementById("playerChip");
 
   const chatToggle = document.getElementById("chatToggle");
@@ -101,74 +102,141 @@
   let currentChatMessages = [];
 
 
-  const CHAT_USER_COLORS = [
-    "#F3C65C",
-    "#65C7FF",
-    "#FF7F96",
-    "#83E37C",
-    "#C89AFF",
-    "#FFAA5C",
-    "#5ED9CB",
-    "#F184D8",
-    "#9DB8FF",
-    "#E6DC70",
-    "#77E5A3",
-    "#FF9476",
-    "#A9A2FF",
-    "#61D7F2",
-    "#EFA667",
-    "#ED86A8",
-    "#A5DB67",
-    "#DDA2FF",
-    "#80C5A4",
-    "#F1B76E"
-  ];
-
-  const TOBIAS_EMOJIS = {
-    ":tobias_nervoso:": {
-      src: "tobias_nervoso.svg",
-      label: "Tobias nervoso"
-    },
-    ":tobias_apaixonado:": {
-      src: "tobias_apaixonado.svg",
-      label: "Tobias apaixonado"
-    },
-    ":tobias_sorridente:": {
-      src: "tobias_sorridente.svg",
-      label: "Tobias sorridente"
-    },
-    ":tobias_chorando:": {
-      src: "tobias_chorando.svg",
-      label: "Tobias chorando"
-    },
-    ":tobias_gargalhada:": {
-      src: "tobias_gargalhada.svg",
-      label: "Tobias dando gargalhada"
-    }
-  };
-
-  let selectedTobiasEmojis = [];
+  const CHAT_USER_COLOR_KEY =
+    "tobias_chat_username_colors_v2";
 
   /*
-    Same username => same color on every device.
-    No database column is needed and repeats are intentionally allowed.
+    Every new username receives the next unused color.
+    Therefore different visible users are guaranteed different colors
+    until all 32 colors are used. Repetition is allowed after that.
   */
-  function colorForUsername(username) {
-    const value =
-      String(username || "")
-        .trim()
-        .toLocaleLowerCase("pt-BR");
+  const CHAT_USER_COLORS = [
+    "#F2C14E", "#43B8FF", "#F26688", "#55D486",
+    "#A88CFF", "#FF934A", "#31C6C0", "#E16DCA",
+    "#6F9CFF", "#D8D14B", "#42CDA0", "#F1785B",
+    "#8D7BFF", "#39BEE1", "#DA9049", "#E66E98",
+    "#86C857", "#C57CFF", "#55B489", "#E7A84A",
+    "#58A6E6", "#D76565", "#74C66D", "#B18AE7",
+    "#E48939", "#47B6A5", "#D773B3", "#798FE8",
+    "#C1B748", "#59BD74", "#D7764E", "#9877D4"
+  ];
 
-    let hash = 2166136261;
+  function normalizeChatUsername(username) {
+    return String(username || "")
+      .trim()
+      .toLocaleLowerCase("pt-BR");
+  }
 
-    for (let i = 0; i < value.length; i++) {
-      hash ^= value.charCodeAt(i);
-      hash = Math.imul(hash, 16777619);
+  function loadChatUserColorMap() {
+    try {
+      const parsed = JSON.parse(
+        localStorage.getItem(
+          CHAT_USER_COLOR_KEY
+        ) || "{}"
+      );
+
+      return (
+        parsed &&
+        typeof parsed === "object"
+      )
+        ? parsed
+        : {};
+    } catch {
+      return {};
+    }
+  }
+
+  let chatUserColorMap =
+    loadChatUserColorMap();
+
+  function saveChatUserColorMap() {
+    try {
+      localStorage.setItem(
+        CHAT_USER_COLOR_KEY,
+        JSON.stringify(
+          chatUserColorMap
+        )
+      );
+    } catch {}
+  }
+
+  function ensureChatUserColors(messages) {
+    const usedColors =
+      new Set(
+        Object.values(
+          chatUserColorMap
+        )
+      );
+
+    for (const message of messages) {
+      const key =
+        normalizeChatUsername(
+          message.username
+        );
+
+      if (
+        !key ||
+        chatUserColorMap[key]
+      ) {
+        continue;
+      }
+
+      let chosenColor = null;
+
+      for (
+        const candidate
+        of CHAT_USER_COLORS
+      ) {
+        if (
+          !usedColors.has(
+            candidate
+          )
+        ) {
+          chosenColor =
+            candidate;
+
+          break;
+        }
+      }
+
+      if (!chosenColor) {
+        const index =
+          Object.keys(
+            chatUserColorMap
+          ).length %
+          CHAT_USER_COLORS.length;
+
+        chosenColor =
+          CHAT_USER_COLORS[index];
+      }
+
+      chatUserColorMap[key] =
+        chosenColor;
+
+      usedColors.add(
+        chosenColor
+      );
     }
 
-    return CHAT_USER_COLORS[
-      (hash >>> 0) % CHAT_USER_COLORS.length
-    ];
+    saveChatUserColorMap();
+  }
+
+  function colorForUsername(username) {
+    const key =
+      normalizeChatUsername(
+        username
+      );
+
+    if (!chatUserColorMap[key]) {
+      ensureChatUserColors([
+        { username }
+      ]);
+    }
+
+    return (
+      chatUserColorMap[key] ||
+      "#F2C14E"
+    );
   }
 
   function messageEmojiTokens(body) {
@@ -489,6 +557,8 @@
   }
 
   function renderChat(messages, forceBottom = false) {
+    ensureChatUserColors(messages);
+
     const nearBottom =
       chatMessages.scrollHeight -
         chatMessages.scrollTop -
@@ -540,8 +610,17 @@
             message.username
           );
 
-        user.style.color =
-          userColor;
+        user.style.setProperty(
+          "color",
+          userColor,
+          "important"
+        );
+
+        user.style.setProperty(
+          "-webkit-text-fill-color",
+          userColor,
+          "important"
+        );
 
         row.style.setProperty(
           "--chat-user-color",
@@ -977,6 +1056,64 @@
   );
 
   // ----------------------------------------------------------
+  // GAME HUD HIDE / RESTORE
+  // ----------------------------------------------------------
+  function isHudHidden() {
+    return gameplayStage.classList.contains(
+      "hud-hidden"
+    );
+  }
+
+  function hideGameHud() {
+    gameplayStage.classList.add(
+      "hud-hidden"
+    );
+  }
+
+  function showGameHud() {
+    gameplayStage.classList.remove(
+      "hud-hidden"
+    );
+  }
+
+  function anyGamePanelOpen() {
+    return allPanels.some(
+      panel =>
+        panel &&
+        panel.classList.contains(
+          "open"
+        )
+    );
+  }
+
+  gameplayStage.addEventListener(
+    "click",
+    event => {
+      /*
+        The ad is outside gameplayStage.
+        Empty-area clicks hide the HUD; controls do not.
+      */
+      if (
+        isHudHidden() ||
+        anyGamePanelOpen()
+      ) {
+        return;
+      }
+
+      if (
+        event.target.closest(
+          "button, a, input, form, label, " +
+          ".player-chip, .game-side-menu, .game-left-menu"
+        )
+      ) {
+        return;
+      }
+
+      hideGameHud();
+    }
+  );
+
+  // ----------------------------------------------------------
   // Generic panel helpers
   // ----------------------------------------------------------
   function hidePanel(panel) {
@@ -1029,7 +1166,15 @@
     showPanel(inventoryPanel);
   });
 
-  settingsToggle.addEventListener("click", () => {
+  settingsToggle.addEventListener("click", event => {
+    if (isHudHidden()) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      showGameHud();
+      return;
+    }
+
     showPanel(settingsPanel);
   });
 
