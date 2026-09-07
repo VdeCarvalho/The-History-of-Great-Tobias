@@ -12,6 +12,16 @@
 
   const playerChip = document.getElementById("playerChip");
 
+  const chatToggle = document.getElementById("chatToggle");
+  const chatPanel = document.getElementById("chatPanel");
+  const closeChat = document.getElementById("closeChat");
+  const chatMessages = document.getElementById("chatMessages");
+  const chatForm = document.getElementById("chatForm");
+  const chatInput = document.getElementById("chatInput");
+  const chatSend = document.getElementById("chatSend");
+  const chatStatus = document.getElementById("chatStatus");
+
+
   const settingsToggle = document.getElementById("settingsToggle");
   const discoveriesToggle = document.getElementById("discoveriesToggle");
   const equipmentToggle = document.getElementById("equipmentToggle");
@@ -22,7 +32,6 @@
   const equipmentPanel = document.getElementById("equipmentPanel");
   const inventoryPanel = document.getElementById("inventoryPanel");
 
-  const gameMusic = document.getElementById("gameMusic");
   const uiClickSound = document.getElementById("uiClickSound");
   const closeSettings = document.getElementById("closeSettings");
 
@@ -65,7 +74,8 @@
     discoveriesPanel,
     equipmentPanel,
     inventoryPanel,
-    itemDetailPanel
+    itemDetailPanel,
+    chatPanel
   ];
 
   let selectedInventoryIndex = null;
@@ -77,16 +87,460 @@
   playerChip.title = `Jogador: ${save.playerName}`;
 
   // ----------------------------------------------------------
+  // GLOBAL CHAT — SUPABASE REALTIME
+  // ----------------------------------------------------------
+  const CHAT_LOCAL_KEY = "tobias_chat_local_prototype_v1";
+  const backend = window.TOBIAS_BACKEND || {};
+
+  let realtimeClient = null;
+  let realtimeChannel = null;
+  let currentChatMessages = [];
+
+  function backendPublicKey() {
+    return (
+      backend.supabasePublishableKey ||
+      backend.supabaseAnonKey ||
+      ""
+    );
+  }
+
+  function chatUsesGlobalBackend() {
+    return (
+      backend.mode === "supabase" &&
+      Boolean(backend.supabaseUrl) &&
+      Boolean(backendPublicKey()) &&
+      Boolean(window.supabase?.createClient)
+    );
+  }
+
+  function getRealtimeClient() {
+    if (!chatUsesGlobalBackend()) {
+      return null;
+    }
+
+    if (!realtimeClient) {
+      realtimeClient =
+        window.supabase.createClient(
+          backend.supabaseUrl,
+          backendPublicKey(),
+          {
+            realtime: {
+              params: {
+                eventsPerSecond: 20
+              }
+            }
+          }
+        );
+    }
+
+    return realtimeClient;
+  }
+
+  function loadLocalChat() {
+    try {
+      const value =
+        JSON.parse(
+          localStorage.getItem(CHAT_LOCAL_KEY) || "[]"
+        );
+
+      return Array.isArray(value)
+        ? value.slice(-1000)
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveLocalChat(messages) {
+    localStorage.setItem(
+      CHAT_LOCAL_KEY,
+      JSON.stringify(messages.slice(-1000))
+    );
+  }
+
+  async function fetchChatMessages() {
+    if (!chatUsesGlobalBackend()) {
+      return loadLocalChat();
+    }
+
+    const client = getRealtimeClient();
+
+    const {
+      data,
+      error
+    } = await client
+      .from("chat_messages")
+      .select("id,username,body,created_at")
+      .order("id", { ascending: false })
+      .limit(1000);
+
+    if (error) {
+      throw error;
+    }
+
+    return (data || []).reverse();
+  }
+
+  async function sendChatMessage(body) {
+    const cleaned =
+      String(body || "")
+        .trim()
+        .replace(/\s+/g, " ");
+
+    if (!cleaned) return false;
+
+    if (!chatUsesGlobalBackend()) {
+      const messages = loadLocalChat();
+
+      messages.push({
+        id: Date.now(),
+        username: save.playerName,
+        body: cleaned,
+        created_at: new Date().toISOString()
+      });
+
+      saveLocalChat(messages);
+
+      currentChatMessages =
+        messages.slice(-1000);
+
+      renderChat(currentChatMessages, true);
+
+      return true;
+    }
+
+    const client = getRealtimeClient();
+
+    const {
+      error
+    } = await client
+      .from("chat_messages")
+      .insert({
+        username: save.playerName,
+        username_key:
+          String(save.playerName)
+            .trim()
+            .toLocaleLowerCase("pt-BR"),
+        body: cleaned
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    /*
+      Do not append manually here.
+      Supabase Realtime will deliver the INSERT to every connected
+      device, including the sender.
+    */
+    return true;
+  }
+
+  function formatChatTime(value) {
+    try {
+      return new Intl.DateTimeFormat(
+        "pt-BR",
+        {
+          hour: "2-digit",
+          minute: "2-digit"
+        }
+      ).format(new Date(value));
+    } catch {
+      return "";
+    }
+  }
+
+  function renderChat(messages, forceBottom = false) {
+    const nearBottom =
+      chatMessages.scrollHeight -
+        chatMessages.scrollTop -
+        chatMessages.clientHeight
+        < 80;
+
+    chatMessages.innerHTML = "";
+
+    if (!messages.length) {
+      const empty =
+        document.createElement("div");
+
+      empty.className = "chat-empty";
+
+      empty.textContent =
+        chatUsesGlobalBackend()
+          ? "Ainda não há mensagens."
+          : "Chat local de teste vazio.";
+
+      chatMessages.appendChild(empty);
+    } else {
+      for (const message of messages) {
+        const row =
+          document.createElement("article");
+
+        row.className = "chat-message";
+
+        if (
+          String(message.username) ===
+          String(save.playerName)
+        ) {
+          row.classList.add("mine");
+        }
+
+        const meta =
+          document.createElement("div");
+
+        meta.className =
+          "chat-message-meta";
+
+        const user =
+          document.createElement("strong");
+
+        user.textContent =
+          message.username || "Jogador";
+
+        const time =
+          document.createElement("time");
+
+        time.textContent =
+          formatChatTime(
+            message.created_at
+          );
+
+        meta.appendChild(user);
+        meta.appendChild(time);
+
+        const body =
+          document.createElement("p");
+
+        body.textContent =
+          message.body;
+
+        row.appendChild(meta);
+        row.appendChild(body);
+        chatMessages.appendChild(row);
+      }
+    }
+
+    if (
+      forceBottom ||
+      nearBottom ||
+      messages.length <= 3
+    ) {
+      chatMessages.scrollTop =
+        chatMessages.scrollHeight;
+    }
+  }
+
+  function appendRealtimeMessage(message) {
+    if (!message?.id) return;
+
+    const alreadyExists =
+      currentChatMessages.some(
+        existing =>
+          String(existing.id) ===
+          String(message.id)
+      );
+
+    if (alreadyExists) return;
+
+    currentChatMessages.push(message);
+
+    if (currentChatMessages.length > 1000) {
+      currentChatMessages =
+        currentChatMessages.slice(-1000);
+    }
+
+    renderChat(
+      currentChatMessages,
+      true
+    );
+  }
+
+  async function disconnectRealtimeChat() {
+    if (
+      realtimeClient &&
+      realtimeChannel
+    ) {
+      try {
+        await realtimeClient
+          .removeChannel(
+            realtimeChannel
+          );
+      } catch {}
+    }
+
+    realtimeChannel = null;
+  }
+
+  async function connectRealtimeChat() {
+    await disconnectRealtimeChat();
+
+    if (!chatUsesGlobalBackend()) {
+      chatStatus.textContent =
+        "MODO LOCAL · CONFIGURE O SUPABASE";
+
+      chatStatus.classList.remove(
+        "error"
+      );
+
+      return;
+    }
+
+    const client =
+      getRealtimeClient();
+
+    chatStatus.textContent =
+      "CONECTANDO...";
+
+    chatStatus.classList.remove(
+      "error"
+    );
+
+    realtimeChannel =
+      client
+        .channel(
+          "tobias-global-chat"
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "chat_messages"
+          },
+          payload => {
+            appendRealtimeMessage(
+              payload.new
+            );
+
+            chatStatus.textContent =
+              "GLOBAL · TEMPO REAL";
+
+            chatStatus.classList.remove(
+              "error"
+            );
+          }
+        )
+        .subscribe(status => {
+          if (
+            status ===
+            "SUBSCRIBED"
+          ) {
+            chatStatus.textContent =
+              "GLOBAL · TEMPO REAL";
+
+            chatStatus.classList.remove(
+              "error"
+            );
+          } else if (
+            status ===
+              "CHANNEL_ERROR" ||
+            status ===
+              "TIMED_OUT"
+          ) {
+            chatStatus.textContent =
+              "ERRO NA CONEXÃO";
+
+            chatStatus.classList.add(
+              "error"
+            );
+          }
+        });
+  }
+
+  async function openChat() {
+    showPanel(chatPanel);
+
+    try {
+      currentChatMessages =
+        await fetchChatMessages();
+
+      renderChat(
+        currentChatMessages,
+        true
+      );
+
+      await connectRealtimeChat();
+    } catch (error) {
+      console.error(error);
+
+      chatStatus.textContent =
+        "CHAT INDISPONÍVEL";
+
+      chatStatus.classList.add(
+        "error"
+      );
+    }
+
+    setTimeout(
+      () => chatInput.focus(),
+      100
+    );
+  }
+
+  chatToggle.addEventListener(
+    "click",
+    openChat
+  );
+
+  closeChat.addEventListener(
+    "click",
+    async () => {
+      await disconnectRealtimeChat();
+      hidePanel(chatPanel);
+    }
+  );
+
+  chatForm.addEventListener(
+    "submit",
+    async event => {
+      event.preventDefault();
+
+      const body =
+        chatInput.value.trim();
+
+      if (!body) return;
+
+      chatSend.disabled = true;
+
+      try {
+        await sendChatMessage(body);
+
+        chatInput.value = "";
+        chatInput.focus();
+      } catch (error) {
+        console.error(error);
+
+        chatStatus.textContent =
+          "NÃO FOI POSSÍVEL ENVIAR";
+
+        chatStatus.classList.add(
+          "error"
+        );
+      } finally {
+        chatSend.disabled = false;
+      }
+    }
+  );
+
+  // ----------------------------------------------------------
   // Generic panel helpers
   // ----------------------------------------------------------
   function hidePanel(panel) {
     if (!panel) return;
+
     panel.classList.remove("open");
     panel.setAttribute("aria-hidden", "true");
   }
 
   function showPanel(panel) {
     if (!panel) return;
+
+    if (
+      panel !== chatPanel &&
+      chatPanel.classList.contains("open")
+    ) {
+      disconnectRealtimeChat();
+    }
 
     allPanels.forEach(p => {
       if (p !== panel) hidePanel(p);
@@ -197,9 +651,6 @@
   }
 
   function applyAudioSettings() {
-    gameMusic.volume = audio.musicVolume;
-    gameMusic.muted = audio.musicMuted;
-
     musicSlider.value = Math.round(audio.musicVolume * 100);
     sfxSlider.value = Math.round(audio.sfxVolume * 100);
 
@@ -216,16 +667,9 @@
     sfxMute.classList.toggle("muted", audio.sfxMuted);
   }
 
-  function resumeMusic() {
-    if (!audio.musicMuted) {
-      gameMusic.play().catch(() => {});
-    }
-  }
-
   musicSlider.addEventListener("input", () => {
     audio.musicVolume = Number(musicSlider.value) / 100;
     musicValue.textContent = `${musicSlider.value}%`;
-    gameMusic.volume = audio.musicVolume;
     saveAudioSettings();
   });
 
@@ -235,14 +679,14 @@
     saveAudioSettings();
   });
 
-  musicMute.addEventListener("click", async () => {
+  musicMute.addEventListener("click", () => {
+    /*
+      This preference now affects ONLY the title-page music.
+      No background music is played on jogo.html.
+    */
     audio.musicMuted = !audio.musicMuted;
     applyAudioSettings();
     saveAudioSettings();
-
-    if (!audio.musicMuted) {
-      await gameMusic.play().catch(() => {});
-    }
   });
 
   sfxMute.addEventListener("click", () => {
@@ -524,24 +968,13 @@
   // ----------------------------------------------------------
   // Lifecycle
   // ----------------------------------------------------------
-  window.addEventListener("pageshow", resumeMusic);
-  window.addEventListener("focus", resumeMusic);
-
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) resumeMusic();
-  });
-
-  document.addEventListener(
-    "pointerdown",
+  window.addEventListener(
+    "pagehide",
     () => {
-      if (!audio.musicMuted) {
-        gameMusic.play().catch(() => {});
-      }
-    },
-    { passive: true }
+      disconnectRealtimeChat();
+    }
   );
 
   applyAudioSettings();
-  resumeMusic();
   renderInventory();
 })();

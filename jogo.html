@@ -22,6 +22,20 @@
       <!-- Identificação do save/conta ativa. -->
       <div class="player-chip" id="playerChip" aria-label="Jogador atual"></div>
 
+      <button
+        class="chat-toggle round-game-button"
+        id="chatToggle"
+        type="button"
+        aria-label="Abrir chat"
+        title="Chat"
+      >
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M12 12h40v31H30L19 52v-9h-7z"/>
+          <path d="M21 23h22"/>
+          <path d="M21 31h16"/>
+        </svg>
+      </button>
+
       <!-- MENU LATERAL: de baixo para cima:
            Configurações, Descobertas, Equipamentos, Inventário. -->
       <nav class="game-side-menu" aria-label="Menus do jogo">
@@ -85,6 +99,42 @@
         </button>
 
       </nav>
+
+      <!-- ===================================================
+           GLOBAL CHAT
+           =================================================== -->
+      <section class="chat-panel" id="chatPanel" aria-hidden="true">
+        <div class="chat-panel-inner">
+
+          <div class="panel-heading chat-heading">
+            <div class="settings-diamond">◆</div>
+            <h1>CHAT</h1>
+            <p id="chatStatus">GLOBAL</p>
+          </div>
+
+          <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+
+          <form class="chat-compose" id="chatForm" autocomplete="off">
+            <input
+              id="chatInput"
+              class="chat-input"
+              type="text"
+              maxlength="500"
+              placeholder="Escreva uma mensagem..."
+              enterkeyhint="send"
+              aria-label="Mensagem do chat"
+            >
+            <button class="chat-send-button" id="chatSend" type="submit">
+              ENVIAR
+            </button>
+          </form>
+
+          <button class="yellow-close-button chat-close" id="closeChat" type="button">
+            FECHAR
+          </button>
+
+        </div>
+      </section>
 
       <!-- ===================================================
            DISCOVERIES
@@ -321,13 +371,12 @@
           </div>
         </div>
       </section>
-
-      <audio id="gameMusic" src="tobias_theme.mp3" loop preload="auto"></audio>
       <audio id="uiClickSound" src="ui_click.mp3" preload="auto"></audio>
 
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="backend-config.js"></script>
   <script src="save-system.js"></script>
   <script src="name-registry.js"></script>

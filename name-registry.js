@@ -5,9 +5,25 @@ window.TobiasNameRegistry = (() => {
     window.TOBIAS_BACKEND || {
       mode: "local",
       supabaseUrl: "",
+      supabasePublishableKey: "",
       supabaseAnonKey: "",
       maxSuffix: 99999
     };
+
+  function publicKey() {
+    const c = cfg();
+    return c.supabasePublishableKey || c.supabaseAnonKey || "";
+  }
+
+  function usesSupabase() {
+    const c = cfg();
+
+    return (
+      c.mode === "supabase" &&
+      Boolean(c.supabaseUrl) &&
+      Boolean(publicKey())
+    );
+  }
 
   function cleanName(value) {
     return String(value ?? "")
@@ -60,7 +76,7 @@ window.TobiasNameRegistry = (() => {
   function runLocalMigrations() {
     const MIGRATION_KEY = "tobias_migration_release_stale_tobias_v1";
 
-    if (cfg().mode !== "local") return;
+    if (usesSupabase()) return;
 
     try {
       if (localStorage.getItem(MIGRATION_KEY) === "done") return;
@@ -135,11 +151,11 @@ window.TobiasNameRegistry = (() => {
   }
 
   function headers() {
-    const c = cfg();
+    const key = publicKey();
 
     return {
-      apikey: c.supabaseAnonKey,
-      Authorization: `Bearer ${c.supabaseAnonKey}`,
+      apikey: key,
+      Authorization: `Bearer ${key}`,
       "Content-Type": "application/json"
     };
   }
@@ -147,7 +163,7 @@ window.TobiasNameRegistry = (() => {
   function assertSupabaseConfigured() {
     const c = cfg();
 
-    if (!c.supabaseUrl || !c.supabaseAnonKey) {
+    if (!c.supabaseUrl || !publicKey()) {
       throw new Error(
         "O registro global ainda não foi configurado."
       );
@@ -238,19 +254,19 @@ window.TobiasNameRegistry = (() => {
   }
 
   async function suggest(name) {
-    return cfg().mode === "supabase"
+    return usesSupabase()
       ? supabaseSuggest(name)
       : localSuggest(name);
   }
 
   async function claim(name) {
-    return cfg().mode === "supabase"
+    return usesSupabase()
       ? supabaseClaim(name)
       : localClaim(name);
   }
 
   async function release(name) {
-    return cfg().mode === "supabase"
+    return usesSupabase()
       ? supabaseRelease(name)
       : localRelease(name);
   }

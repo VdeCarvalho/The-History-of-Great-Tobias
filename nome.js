@@ -7,10 +7,7 @@
   const acceptSuggested = document.getElementById("acceptSuggested");
   const retryName = document.getElementById("retryName");
   const submitButton = document.getElementById("confirmName");
-
   const nameMusic = document.getElementById("nameMusic");
-  const nameSoundToggle = document.getElementById("nameSoundToggle");
-  const nameSoundIcon = document.getElementById("nameSoundIcon");
   const uiClickSound = document.getElementById("uiClickSound");
 
   const AUDIO_KEY = "tobias_audio_settings_v1";
@@ -18,12 +15,9 @@
 
   let baseName = "";
   let suggestion = "";
-  let audioUnlocked = false;
 
   /*
-    IMPORTANT:
-    Once a save exists, this page must never be usable again.
-    If browser history or a direct URL reaches it, go to the title page.
+    Once a save exists, name creation cannot be used again.
   */
   if (window.TobiasSave && TobiasSave.exists()) {
     window.location.replace("index.html");
@@ -31,9 +25,9 @@
   }
 
   // ----------------------------------------------------------
-  // Music continuity from index.html
+  // Background music — continues from index.html
   // ----------------------------------------------------------
-  function readAudioSettings() {
+  function readMusicSettings() {
     try {
       return JSON.parse(
         localStorage.getItem(AUDIO_KEY) || "{}"
@@ -43,21 +37,29 @@
     }
   }
 
-  let audioSettings = readAudioSettings();
+  const musicSettings = readMusicSettings();
 
-  nameMusic.volume =
-    Number.isFinite(Number(audioSettings.musicVolume))
-      ? Math.max(0, Math.min(1, Number(audioSettings.musicVolume)))
-      : 0.42;
+  if (nameMusic) {
+    nameMusic.volume =
+      Number.isFinite(Number(musicSettings.musicVolume))
+        ? Math.max(
+            0,
+            Math.min(
+              1,
+              Number(musicSettings.musicVolume)
+            )
+          )
+        : 0.42;
 
-  let musicMuted =
-    typeof audioSettings.musicMuted === "boolean"
-      ? audioSettings.musicMuted
-      : localStorage.getItem("tobiasMusic") === "off";
-
-  nameMusic.muted = musicMuted;
+    nameMusic.muted =
+      typeof musicSettings.musicMuted === "boolean"
+        ? musicSettings.musicMuted
+        : localStorage.getItem("tobiasMusic") === "off";
+  }
 
   function restoreMusicPosition() {
+    if (!nameMusic) return;
+
     try {
       const saved = Number(
         sessionStorage.getItem(MUSIC_POSITION_KEY)
@@ -76,6 +78,8 @@
   }
 
   function rememberMusicPosition() {
+    if (!nameMusic) return;
+
     try {
       sessionStorage.setItem(
         MUSIC_POSITION_KEY,
@@ -88,125 +92,81 @@
     } catch {}
   }
 
-  function persistAudioSettings() {
-    audioSettings.musicVolume = nameMusic.volume;
-    audioSettings.musicMuted = musicMuted;
-
-    if (!Number.isFinite(Number(audioSettings.sfxVolume))) {
-      audioSettings.sfxVolume = 0.7;
-    }
-
-    if (typeof audioSettings.sfxMuted !== "boolean") {
-      audioSettings.sfxMuted = false;
-    }
-
-    localStorage.setItem(
-      AUDIO_KEY,
-      JSON.stringify(audioSettings)
-    );
-
-    localStorage.setItem(
-      "tobiasMusic",
-      musicMuted ? "off" : "on"
-    );
-  }
-
-  function renderSoundState() {
-    nameSoundToggle.classList.toggle(
-      "off",
-      musicMuted
-    );
-
-    nameSoundIcon.textContent =
-      musicMuted ? "×" : "♪";
-
-    nameSoundToggle.setAttribute(
-      "aria-label",
-      musicMuted
-        ? "Ligar música"
-        : "Desligar música"
-    );
-  }
-
-  async function startMusic() {
-    if (musicMuted) return;
+  async function startNameMusic() {
+    if (!nameMusic || nameMusic.muted) return;
 
     try {
       await nameMusic.play();
-      audioUnlocked = true;
     } catch {
-      // The first user gesture below unlocks audio when needed.
+      // Mobile browser may require the first user gesture.
     }
   }
 
-  nameMusic.addEventListener(
-    "loadedmetadata",
-    () => {
-      restoreMusicPosition();
-      startMusic();
-    }
-  );
-
-  nameMusic.addEventListener(
-    "timeupdate",
-    rememberMusicPosition
-  );
-
-  nameSoundToggle.addEventListener(
-    "click",
-    async event => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      musicMuted = !musicMuted;
-      nameMusic.muted = musicMuted;
-
-      persistAudioSettings();
-      renderSoundState();
-
-      if (!musicMuted) {
-        await startMusic();
+  if (nameMusic) {
+    nameMusic.addEventListener(
+      "loadedmetadata",
+      () => {
+        restoreMusicPosition();
+        startNameMusic();
       }
-    }
-  );
+    );
 
-  document.addEventListener(
-    "pointerdown",
-    () => {
-      if (!musicMuted && !audioUnlocked) {
-        startMusic();
+    nameMusic.addEventListener(
+      "timeupdate",
+      rememberMusicPosition
+    );
+
+    window.addEventListener(
+      "pageshow",
+      startNameMusic
+    );
+
+    window.addEventListener(
+      "focus",
+      startNameMusic
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (!document.hidden) {
+          startNameMusic();
+        }
       }
-    },
-    { passive: true }
-  );
+    );
 
-  window.addEventListener("pageshow", startMusic);
-  window.addEventListener("focus", startMusic);
-
-  document.addEventListener(
-    "visibilitychange",
-    () => {
-      if (!document.hidden) {
-        startMusic();
+    document.addEventListener(
+      "pointerdown",
+      startNameMusic,
+      {
+        passive: true,
+        once: true
       }
-    }
-  );
+    );
 
+    startNameMusic();
+  }
+
+  // ----------------------------------------------------------
+  // UI SFX
+  // ----------------------------------------------------------
   function playUiClick() {
     if (!uiClickSound) return;
 
-    let s = {};
+    let settings = {};
+
     try {
-      s = JSON.parse(
-        localStorage.getItem(AUDIO_KEY) || "{}"
-      ) || {};
+      settings =
+        JSON.parse(
+          localStorage.getItem(AUDIO_KEY) || "{}"
+        ) || {};
     } catch {}
 
-    if (s.sfxMuted === true) return;
+    if (settings.sfxMuted === true) return;
 
     uiClickSound.volume =
-      Number.isFinite(Number(s.sfxVolume))
-        ? Math.max(0, Math.min(1, Number(s.sfxVolume)))
+      Number.isFinite(Number(settings.sfxVolume))
+        ? Math.max(0, Math.min(1, Number(settings.sfxVolume)))
         : 0.7;
 
     try {
@@ -219,9 +179,8 @@
   document.addEventListener(
     "click",
     event => {
-      const control = event.target.closest(
-        "button, a[href]"
-      );
+      const control =
+        event.target.closest("button, a[href]");
 
       if (control) {
         playUiClick();
@@ -231,7 +190,7 @@
   );
 
   // ----------------------------------------------------------
-  // Name flow
+  // Name creation
   // ----------------------------------------------------------
   function setBusy(busy) {
     input.disabled = busy;
@@ -265,13 +224,8 @@
     TobiasSave.create(name);
 
     /*
-      replace() removes nome.html from the history stack.
-      Before:
-          index -> nome -> jogo
-      After replacement:
-          index -> jogo
-
-      Therefore Back from the game returns to index.html.
+      Removes nome.html from browser history:
+        index -> jogo
     */
     window.location.replace("jogo.html");
   }
@@ -399,9 +353,6 @@
       setStatus("");
     }
   );
-
-  renderSoundState();
-  startMusic();
 
   setTimeout(
     () => input.focus(),
