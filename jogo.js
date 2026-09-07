@@ -471,9 +471,112 @@
       );
     }
 
+    /*
+      Não focamos o campo automaticamente.
+      O jogador pode abrir o chat apenas para acompanhar as mensagens.
+      O teclado só aparece quando ele toca no campo de mensagem.
+    */
+  }
+
+  // ----------------------------------------------------------
+  // MOBILE KEYBOARD / VISUAL VIEWPORT
+  // ----------------------------------------------------------
+  function updateChatVisibleViewport() {
+    const viewport =
+      window.visualViewport;
+
+    const visibleHeight =
+      viewport
+        ? viewport.height
+        : window.innerHeight;
+
+    document.documentElement.style.setProperty(
+      "--tobias-visible-height",
+      `${Math.round(visibleHeight)}px`
+    );
+  }
+
+  function enterChatKeyboardMode() {
+    document.body.classList.add(
+      "chat-keyboard-open"
+    );
+
+    updateChatVisibleViewport();
+
+    requestAnimationFrame(
+      updateChatVisibleViewport
+    );
+
     setTimeout(
-      () => chatInput.focus(),
-      100
+      updateChatVisibleViewport,
+      120
+    );
+
+    setTimeout(
+      updateChatVisibleViewport,
+      350
+    );
+  }
+
+  function leaveChatKeyboardMode() {
+    /*
+      Small delay avoids layout flashing when the user taps ENVIAR
+      and focus briefly transitions between controls.
+    */
+    setTimeout(
+      () => {
+        if (
+          document.activeElement !==
+          chatInput
+        ) {
+          document.body.classList.remove(
+            "chat-keyboard-open"
+          );
+
+          document.documentElement.style.removeProperty(
+            "--tobias-visible-height"
+          );
+        }
+      },
+      120
+    );
+  }
+
+  chatInput.addEventListener(
+    "focus",
+    enterChatKeyboardMode
+  );
+
+  chatInput.addEventListener(
+    "blur",
+    leaveChatKeyboardMode
+  );
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener(
+      "resize",
+      () => {
+        if (
+          document.body.classList.contains(
+            "chat-keyboard-open"
+          )
+        ) {
+          updateChatVisibleViewport();
+        }
+      }
+    );
+
+    window.visualViewport.addEventListener(
+      "scroll",
+      () => {
+        if (
+          document.body.classList.contains(
+            "chat-keyboard-open"
+          )
+        ) {
+          updateChatVisibleViewport();
+        }
+      }
     );
   }
 
@@ -485,6 +588,21 @@
   closeChat.addEventListener(
     "click",
     async () => {
+      if (
+        document.activeElement ===
+        chatInput
+      ) {
+        chatInput.blur();
+      }
+
+      document.body.classList.remove(
+        "chat-keyboard-open"
+      );
+
+      document.documentElement.style.removeProperty(
+        "--tobias-visible-height"
+      );
+
       await disconnectRealtimeChat();
       hidePanel(chatPanel);
     }

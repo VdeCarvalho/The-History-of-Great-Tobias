@@ -22,19 +22,23 @@
       <!-- Identificação do save/conta ativa. -->
       <div class="player-chip" id="playerChip" aria-label="Jogador atual"></div>
 
-      <button
-        class="chat-toggle round-game-button"
-        id="chatToggle"
-        type="button"
-        aria-label="Abrir chat"
-        title="Chat"
-      >
-        <svg viewBox="0 0 64 64" aria-hidden="true">
-          <path d="M12 12h40v31H30L19 52v-9h-7z"/>
-          <path d="M21 23h22"/>
-          <path d="M21 31h16"/>
-        </svg>
-      </button>
+      <!-- CHAT — espelhado horizontalmente com Configurações -->
+      <nav class="game-left-menu" aria-label="Chat">
+        <button
+          class="round-game-button chat-menu-button"
+          id="chatToggle"
+          type="button"
+          aria-label="Abrir chat"
+          title="Chat"
+        >
+          <svg class="chat-bubble-symbol" viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M13 11h38a7 7 0 0 1 7 7v22a7 7 0 0 1-7 7H31L18 56v-9h-5a7 7 0 0 1-7-7V18a7 7 0 0 1 7-7z"/>
+            <circle cx="22" cy="29" r="2.8"/>
+            <circle cx="32" cy="29" r="2.8"/>
+            <circle cx="42" cy="29" r="2.8"/>
+          </svg>
+        </button>
+      </nav>
 
       <!-- MENU LATERAL: de baixo para cima:
            Configurações, Descobertas, Equipamentos, Inventário. -->
@@ -109,8 +113,10 @@
           <div class="panel-heading chat-heading">
             <div class="settings-diamond">◆</div>
             <h1>CHAT</h1>
-            <p id="chatStatus">GLOBAL</p>
           </div>
+
+          <!-- Estado técnico mantido apenas para acessibilidade/diagnóstico. -->
+          <span id="chatStatus" class="chat-runtime-status" aria-live="polite" hidden></span>
 
           <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
 

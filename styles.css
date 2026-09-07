@@ -1231,3 +1231,192 @@ audio {
   flex: 0 0 auto;
   margin-top: clamp(10px,2.5vw,29px);
 }
+
+
+/* =========================================================
+   CHAT BUTTON — EXACT MIRROR OF SETTINGS
+   ========================================================= */
+
+/*
+  The button is now inside its own lower-left menu container, matching
+  .game-side-menu on the right. This avoids the old isolated-circle
+  positioning behavior.
+*/
+.game-left-menu {
+  position: absolute;
+  z-index: 12;
+  left: 3%;
+  bottom: 2.2%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chat-menu-button {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: auto !important;
+  width: clamp(42px,10vw,117px);
+  aspect-ratio: 1;
+  padding: 18%;
+  background: rgba(5,16,24,.70);
+  color: #f9df8c;
+}
+
+.chat-menu-button .chat-bubble-symbol {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chat-menu-button .chat-bubble-symbol circle {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* Old selector must no longer control the chat button. */
+.chat-toggle {
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: auto !important;
+}
+
+/* Only CHAT is visibly shown at the top. */
+.chat-runtime-status {
+  display: none !important;
+}
+
+.chat-heading {
+  margin-bottom: clamp(12px,3vw,35px);
+}
+
+/* =========================================================
+   MOBILE CHAT + VIRTUAL KEYBOARD
+   ========================================================= */
+
+/*
+  visualViewport.height is injected by jogo.js only while the text field
+  is focused. The complete page then fits inside the area not covered by
+  the mobile keyboard, preserving the ad at the top.
+*/
+body.chat-keyboard-open .page-shell {
+  height: var(--tobias-visible-height, 100dvh) !important;
+  max-height: var(--tobias-visible-height, 100dvh) !important;
+}
+
+body.chat-keyboard-open .chat-panel-inner {
+  padding:
+    clamp(4px,1.2vw,10px)
+    clamp(10px,2.8vw,22px)
+    clamp(5px,1.4vw,12px);
+}
+
+body.chat-keyboard-open .chat-heading {
+  margin-bottom: clamp(3px,.9vw,8px);
+}
+
+body.chat-keyboard-open .chat-heading .settings-diamond {
+  display: none;
+}
+
+body.chat-keyboard-open .chat-heading h1 {
+  font-size: clamp(18px,5.2vw,34px);
+  line-height: 1;
+}
+
+body.chat-keyboard-open .chat-messages {
+  flex: 1 1 0;
+  min-height: 0;
+  padding:
+    clamp(3px,.8vw,7px)
+    clamp(3px,.8vw,7px)
+    clamp(5px,1.2vw,10px);
+  border-radius: clamp(7px,1.8vw,14px);
+}
+
+body.chat-keyboard-open .chat-message {
+  margin-bottom: clamp(4px,1vw,8px);
+  padding:
+    clamp(5px,1.3vw,10px)
+    clamp(7px,1.8vw,14px);
+}
+
+body.chat-keyboard-open .chat-message-meta {
+  margin-bottom: .18em;
+}
+
+body.chat-keyboard-open .chat-message p {
+  font-size: clamp(11px,3vw,16px);
+  line-height: 1.25;
+}
+
+body.chat-keyboard-open .chat-compose {
+  flex: 0 0 auto;
+  margin-top: clamp(4px,1vw,8px);
+  gap: clamp(5px,1.3vw,10px);
+}
+
+body.chat-keyboard-open .chat-input {
+  min-height: 42px;
+  height: 42px;
+  /*
+    16px prevents Safari/iPhone from zooming the page when the field
+    receives focus.
+  */
+  font-size: 16px;
+  padding: 0 10px;
+}
+
+body.chat-keyboard-open .chat-send-button {
+  min-height: 42px;
+  height: 42px;
+  min-width: 78px;
+  font-size: clamp(11px,3vw,15px);
+}
+
+body.chat-keyboard-open .chat-close {
+  flex: 0 0 auto;
+  min-height: 40px;
+  height: 40px;
+  margin-top: clamp(4px,1vw,8px);
+  font-size: clamp(12px,3.3vw,16px);
+}
+
+/*
+  The ad remains flex:0 0 auto. The game stage receives exactly the
+  remaining visible height above the keyboard.
+*/
+body.chat-keyboard-open .ad-slot {
+  flex: 0 0 auto;
+}
+
+body.chat-keyboard-open .game-stage {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* On very short keyboard-visible viewports, keep controls over decoration. */
+@media (max-height: 520px) {
+  body.chat-keyboard-open .chat-heading {
+    margin-bottom: 2px;
+  }
+
+  body.chat-keyboard-open .chat-heading h1 {
+    font-size: 18px;
+  }
+
+  body.chat-keyboard-open .chat-close,
+  body.chat-keyboard-open .chat-input,
+  body.chat-keyboard-open .chat-send-button {
+    min-height: 38px;
+    height: 38px;
+  }
+}

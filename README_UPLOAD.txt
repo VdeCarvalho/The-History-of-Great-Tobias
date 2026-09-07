@@ -377,3 +377,46 @@ Volume and mute preferences continue to use:
   localStorage -> tobias_audio_settings_v1
 
 UI click effects remain active on all interfaces.
+
+
+============================================================
+CHAT — MOBILE UX UPDATE
+============================================================
+
+1. HEADER
+---------
+The visible chat header now contains only:
+  CHAT
+
+Technical Realtime status remains hidden from the visual interface.
+
+2. CHAT BUTTON
+--------------
+The chat control is now inside a dedicated lower-left menu container.
+It exactly mirrors the horizontal/vertical anchor of Settings:
+  left: 3%
+  bottom: 2.2%
+
+The icon is a clear speech bubble with three dots.
+
+3. NO AUTOMATIC KEYBOARD
+------------------------
+Opening Chat no longer calls focus() on the message field.
+
+The player can open Chat and simply read messages without the keyboard
+appearing.
+
+The keyboard opens only when the player explicitly taps the message field.
+
+4. MOBILE KEYBOARD LAYOUT
+-------------------------
+When the message input receives focus:
+- VisualViewport height is measured.
+- page-shell is resized to the visible area above the keyboard.
+- the advertising area remains visible.
+- CHAT remains visible in a compact header.
+- the message history receives all remaining flexible space.
+- the message field remains visible.
+- ENVIAR remains visible.
+- FECHAR remains visible.
+- the input uses 16px text while focused to prevent iOS auto-zoom.
