@@ -1981,3 +1981,53 @@ body.game-page.chat-keyboard-open
 .room-canvas{cursor:pointer;touch-action:none;background:#1a1511}
 .gameplay-stage{background:#1a1511!important}
 .point-click-hint{pointer-events:none}
+
+
+/* =========================================================
+   PRÓXIMO CÔMODO — HUD COMPLETO ATIVO
+   ========================================================= */
+.construction-page .gameplay-stage {
+  background:
+    radial-gradient(circle at 50% 22%, rgba(79,123,155,.28), transparent 32%),
+    linear-gradient(180deg, #294762 0%, #14273a 52%, #0b1520 100%);
+}
+
+.construction-room-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px),
+    radial-gradient(circle at 50% 30%, rgba(255,219,118,.08), transparent 28%);
+  background-size: 42px 42px, 42px 42px, auto;
+}
+
+.construction-hidden-canvas {
+  position: absolute;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.construction-page .construction-panel-with-hud {
+  position: relative;
+  z-index: 2;
+  align-self: center;
+  justify-self: center;
+  margin: auto;
+  max-width: min(82%, 760px);
+}
+
+/* Keep the central status card below every persistent HUD button and modal. */
+.construction-page .player-chip { z-index: 8; }
+.construction-page .game-left-menu,
+.construction-page .game-side-menu { z-index: 10; }
+.construction-page .settings-panel,
+.construction-page .simple-game-panel,
+.construction-page .inventory-panel,
+.construction-page .item-detail-panel,
+.construction-page .chat-panel,
+.construction-page .danger-dialog { z-index: 30; }

@@ -16,3 +16,9 @@ Visual:
 - o personagem continua provisório para teste de navegação, conforme a especificação inicial.
 
 Envie TODOS os arquivos deste ZIP para a raiz do repositório GitHub Pages, substituindo os arquivos de mesmo nome.
+
+UPDATE — PRÓXIMO CÔMODO COM HUD ATIVO
+- proximo-comodo.html agora mantém o mesmo HUD da página principal do jogo.
+- Chat, Inventário, Equipamentos, Descobertas e Configurações permanecem utilizáveis.
+- O botão VOLTAR AO QUARTO continua disponível no centro da página.
+- O mundo/câmera do quarto não roda em segundo plano nesta página.

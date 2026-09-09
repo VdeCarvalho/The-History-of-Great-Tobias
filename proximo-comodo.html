@@ -7,18 +7,279 @@
   <title>Próximo cômodo — A História do Grande Tobias</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+
+<body class="game-page construction-page">
   <main class="page-shell">
-    <section class="ad-slot" aria-label="Espaço reservado para publicidade"><span>PUBLICIDADE</span></section>
-    <section class="game-stage construction-stage">
-      <div class="construction-panel">
+
+    <section class="ad-slot" aria-label="Espaço reservado para publicidade">
+      <span>PUBLICIDADE</span>
+    </section>
+
+    <section class="game-stage gameplay-stage" id="gameplayStage">
+
+      <!-- Próximo cômodo ainda em construção. O HUD completo permanece ativo. -->
+      <div class="construction-room-backdrop" aria-hidden="true"></div>
+
+      <!-- Canvas técnico oculto: permite reutilizar toda a lógica de menus sem carregar o mundo anterior. -->
+      <canvas id="roomCanvas" class="construction-hidden-canvas" width="1" height="1" aria-hidden="true"></canvas>
+      <div class="room-exit-hint" id="roomExitHint" hidden></div>
+      <div class="point-click-hint" id="pointClickHint" hidden></div>
+
+      <div class="construction-panel construction-panel-with-hud">
         <div class="mini-ornament">◆</div>
         <h1>PRÓXIMO CÔMODO</h1>
         <p>Em construção.</p>
-        <p class="construction-subcopy">Esta página foi reservada para o próximo ambiente do jogo.</p>
+        <p class="construction-subcopy">Este ambiente será adicionado em uma próxima atualização.</p>
         <a class="fantasy-button primary construction-back" href="jogo.html"><span>VOLTAR AO QUARTO</span></a>
       </div>
+
+      <!-- Identificação do save/conta ativa. -->
+      <div class="player-chip" id="playerChip" aria-label="Jogador atual"></div>
+
+      <!-- CHAT — espelhado horizontalmente com Configurações -->
+      <nav class="game-left-menu" aria-label="Chat">
+        <button
+          class="round-game-button chat-menu-button"
+          id="chatToggle"
+          type="button"
+          aria-label="Abrir chat"
+          title="Chat"
+        >
+          <svg class="chat-bubble-symbol" viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M13 11h38a7 7 0 0 1 7 7v22a7 7 0 0 1-7 7H31L18 56v-9h-5a7 7 0 0 1-7-7V18a7 7 0 0 1 7-7z"/>
+            <circle cx="22" cy="29" r="2.8"/>
+            <circle cx="32" cy="29" r="2.8"/>
+            <circle cx="42" cy="29" r="2.8"/>
+          </svg>
+        </button>
+      </nav>
+
+      <!-- MENU LATERAL: de baixo para cima:
+           Configurações, Descobertas, Equipamentos, Inventário. -->
+      <nav class="game-side-menu" aria-label="Menus do jogo">
+
+        <button
+          class="round-game-button inventory-button"
+          id="inventoryToggle"
+          type="button"
+          aria-label="Abrir inventário"
+          title="Inventário"
+        >
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M20 23c1-9 6-14 12-14s11 5 12 14"/>
+            <path d="M13 25h38l-3 29H16z"/>
+            <path d="M23 25c0 5 3 8 9 8s9-3 9-8"/>
+          </svg>
+        </button>
+
+        <button
+          class="round-game-button equipment-button"
+          id="equipmentToggle"
+          type="button"
+          aria-label="Abrir equipamentos"
+          title="Equipamentos"
+        >
+          <svg class="equipment-symbol" viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M32 5l7 8-4 28H29l-4-28z"/>
+            <path d="M25 13h14"/>
+            <path d="M23 41h18"/>
+            <path d="M27 41v7h10v-7"/>
+            <path d="M25 48h14"/>
+            <path d="M32 48v8"/>
+            <path d="M28 56h8"/>
+            <path d="M32 8v29"/>
+          </svg>
+        </button>
+
+        <button
+          class="round-game-button discoveries-button"
+          id="discoveriesToggle"
+          type="button"
+          aria-label="Abrir descobertas"
+          title="Descobertas"
+        >
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M8 14c9-3 17-1 24 5v35c-7-6-15-8-24-5z"/>
+            <path d="M56 14c-9-3-17-1-24 5v35c7-6 15-8 24-5z"/>
+            <path d="M32 19v35"/>
+          </svg>
+        </button>
+
+        <button
+          class="round-game-button settings-toggle"
+          id="settingsToggle"
+          type="button"
+          aria-label="Abrir configurações"
+          title="Configurações"
+        >
+          <span aria-hidden="true">⚙</span>
+        </button>
+
+      </nav>
+
+      <!-- ===================================================
+           GLOBAL CHAT
+           =================================================== -->
+      <section class="chat-panel" id="chatPanel" aria-hidden="true">
+        <div class="chat-panel-inner">
+
+          <div class="panel-heading chat-heading">
+            <div class="settings-diamond">◆</div>
+            <h1>CHAT</h1>
+          </div>
+
+          <span id="chatStatus" class="chat-runtime-status" aria-live="polite" hidden></span>
+
+          <div class="chat-messages" id="chatMessages" aria-live="polite" aria-label="Mensagens do chat"></div>
+
+          <section class="tobias-emoji-picker" id="tobiasEmojiPicker" aria-hidden="true">
+            <div class="tobias-emoji-options">
+              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_nervoso:" aria-label="Tobias nervoso"><img src="tobias_nervoso.png" alt=""></button>
+              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_apaixonado:" aria-label="Tobias apaixonado"><img src="tobias_apaixonado.png" alt=""></button>
+              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_sorridente:" aria-label="Tobias sorridente"><img src="tobias_sorridente.png" alt=""></button>
+              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_chorando:" aria-label="Tobias chorando"><img src="tobias_chorando.png" alt=""></button>
+              <button type="button" class="tobias-emoji-option" data-tobias-emoji=":tobias_gargalhada:" aria-label="Tobias dando gargalhada"><img src="tobias_gargalhada.png" alt=""></button>
+            </div>
+          </section>
+
+          <div class="chat-emoji-draft" id="chatEmojiDraft" hidden aria-label="Emoticons selecionados"></div>
+
+          <form class="chat-compose" id="chatForm" autocomplete="off">
+            <button class="tobias-emoji-toggle" id="tobiasEmojiToggle" type="button" aria-label="Abrir emoticons do Tobias" aria-expanded="false">
+              <img src="tobias_sorridente.png" alt="">
+            </button>
+            <input id="chatInput" class="chat-input" type="text" maxlength="500" placeholder="Escreva uma mensagem..." enterkeyhint="send" aria-label="Mensagem do chat">
+            <button class="chat-send-button" id="chatSend" type="submit">ENVIAR</button>
+          </form>
+
+          <button class="yellow-close-button chat-close" id="closeChat" type="button">FECHAR</button>
+        </div>
+      </section>
+
+      <!-- DISCOVERIES -->
+      <section class="simple-game-panel" id="discoveriesPanel" aria-hidden="true">
+        <div class="simple-panel-inner">
+          <div class="panel-heading">
+            <div class="settings-diamond">◆</div>
+            <h1>DESCOBERTAS</h1>
+          </div>
+          <div class="empty-panel-space"></div>
+          <button class="yellow-close-button" data-close-panel="discoveriesPanel" type="button">FECHAR</button>
+        </div>
+      </section>
+
+      <!-- EQUIPMENT -->
+      <section class="simple-game-panel" id="equipmentPanel" aria-hidden="true">
+        <div class="simple-panel-inner">
+          <div class="panel-heading">
+            <div class="settings-diamond">◆</div>
+            <h1>EQUIPAMENTOS</h1>
+          </div>
+          <div class="empty-panel-space"></div>
+          <button class="yellow-close-button" data-close-panel="equipmentPanel" type="button">FECHAR</button>
+        </div>
+      </section>
+
+      <!-- INVENTORY -->
+      <section class="inventory-panel" id="inventoryPanel" aria-hidden="true">
+        <div class="inventory-panel-inner">
+          <div class="panel-heading inventory-heading">
+            <div class="settings-diamond">◆</div>
+            <h1>INVENTÁRIO</h1>
+          </div>
+          <div class="inventory-scroll">
+            <div class="inventory-grid" id="inventoryGrid" aria-label="Inventário com 100 espaços"></div>
+          </div>
+          <button class="yellow-close-button inventory-close" id="closeInventory" type="button">FECHAR</button>
+        </div>
+      </section>
+
+      <!-- ITEM DETAIL -->
+      <section class="item-detail-panel" id="itemDetailPanel" aria-hidden="true">
+        <div class="item-detail-card">
+          <div class="item-detail-icon" id="detailIcon"></div>
+          <h2 id="detailName"></h2>
+          <div class="item-detail-section"><span class="detail-label">TIPO</span><p id="detailType"></p></div>
+          <div class="item-detail-section"><span class="detail-label">DESCRIÇÃO</span><p id="detailDescription"></p></div>
+          <div class="item-detail-section"><span class="detail-label">FABRICAÇÃO</span><p id="detailCrafting"></p></div>
+          <div class="item-detail-quantity" id="detailQuantity"></div>
+          <div class="item-actions" id="itemActions">
+            <button class="item-discard-button" id="discardItem" type="button">DESCARTAR</button>
+            <button class="item-equip-button" id="equipItem" type="button">EQUIPAR</button>
+          </div>
+          <button class="detail-back-button" id="closeItemDetail" type="button">VOLTAR</button>
+        </div>
+      </section>
+
+      <!-- DISCARD CONFIRM -->
+      <section class="danger-dialog" id="discardDialog" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="danger-card">
+          <div class="danger-symbol">!</div>
+          <h2>DESCARTAR ITEM?</h2>
+          <p id="discardQuestion">Você tem certeza que quer descartar este item?</p>
+          <p class="danger-emphasis">Ele será perdido para sempre.</p>
+          <div class="danger-actions">
+            <button class="danger-no" id="discardNo" type="button">NÃO</button>
+            <button class="danger-yes" id="discardYes" type="button">SIM</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="settings-panel" id="settingsPanel" aria-hidden="true" aria-labelledby="settingsTitle">
+        <div class="settings-panel-inner">
+          <div class="settings-heading"><div class="settings-diamond">◆</div><h1 id="settingsTitle">CONFIGURAÇÕES</h1></div>
+          <div class="audio-setting-row">
+            <div class="audio-setting-copy"><label for="musicVolume">Música</label><output id="musicValue" for="musicVolume">42%</output></div>
+            <div class="audio-control-line">
+              <input class="fantasy-slider" id="musicVolume" type="range" min="0" max="100" step="1" value="42" aria-label="Volume da música">
+              <button class="audio-mute-button" id="musicMute" type="button" aria-label="Mutar música"><span class="audio-icon" aria-hidden="true">🔊</span></button>
+            </div>
+          </div>
+          <div class="audio-setting-row">
+            <div class="audio-setting-copy"><label for="sfxVolume">Efeitos de áudio</label><output id="sfxValue" for="sfxVolume">70%</output></div>
+            <div class="audio-control-line">
+              <input class="fantasy-slider" id="sfxVolume" type="range" min="0" max="100" step="1" value="70" aria-label="Volume dos efeitos de áudio">
+              <button class="audio-mute-button" id="sfxMute" type="button" aria-label="Mutar efeitos de áudio"><span class="audio-icon" aria-hidden="true">🔊</span></button>
+            </div>
+          </div>
+          <div class="settings-delete-spacer-top"></div>
+          <button class="delete-progress-button settings-delete-raised" id="deleteProgress" type="button">DELETAR PROGRESSO</button>
+          <div class="settings-spacer"></div>
+          <button class="settings-play-button" id="closeSettings" type="button">FECHAR</button>
+        </div>
+      </section>
+
+      <section class="danger-dialog" id="deleteDialogOne" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="danger-card">
+          <div class="danger-symbol">!</div>
+          <h2>ATENÇÃO</h2>
+          <p>Esta ação vai deletar completamente todo o progresso armazenado neste dispositivo e neste navegador.</p>
+          <p class="danger-emphasis">Isso não pode ser revertido.</p>
+          <p>Você tem certeza que quer apagar todo o seu progresso?</p>
+          <div class="danger-actions"><button class="danger-no" id="deleteNoOne" type="button">NÃO</button><button class="danger-yes" id="deleteYesOne" type="button">SIM</button></div>
+        </div>
+      </section>
+
+      <section class="danger-dialog" id="deleteDialogTwo" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="danger-card second-warning">
+          <div class="danger-symbol">!!</div>
+          <h2>VOCÊ REALMENTE TEM CERTEZA?</h2>
+          <p>Tipo... <strong>certeza mesmo?</strong></p>
+          <p>O Tobias não vai conseguir voltar no tempo para buscar esse save.</p>
+          <p class="danger-emphasis">Última chance.</p>
+          <div class="danger-actions"><button class="danger-no" id="deleteNoTwo" type="button">NÃO</button><button class="danger-yes final-delete" id="deleteYesTwo" type="button">SIM, APAGAR TUDO</button></div>
+        </div>
+      </section>
+
+      <audio id="uiClickSound" src="ui_click.mp3" preload="auto"></audio>
     </section>
   </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="backend-config.js"></script>
+  <script src="save-system.js"></script>
+  <script src="name-registry.js"></script>
+  <script src="jogo.js"></script>
 </body>
 </html>

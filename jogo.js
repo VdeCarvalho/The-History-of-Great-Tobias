@@ -11,6 +11,7 @@
 
   const AUDIO_KEY = "tobias_audio_settings_v1";
   const GAME_STATE_KEY = "tobias_game_state_v1";
+  const constructionMode = document.body.classList.contains("construction-page");
 
   const gameplayStage = document.getElementById("gameplayStage");
   const playerChip = document.getElementById("playerChip");
@@ -1608,6 +1609,7 @@
     }
 
     if (
+      !constructionMode &&
       nearDoor &&
       !exitTriggered &&
       player.y > world.height * 0.875
@@ -1651,16 +1653,23 @@
   // ----------------------------------------------------------
   window.addEventListener("pagehide", () => {
     disconnectRealtimeChat();
-    saveRoomState();
+    if (!constructionMode) {
+      saveRoomState();
+    }
   });
 
   window.addEventListener("resize", () => {
+    if (constructionMode) return;
     navigationPath = [];
     navigationTarget = null;
     buildRoomLayout();
   });
+
   applyAudioSettings();
   renderInventory();
-  buildRoomLayout();
-  requestAnimationFrame(gameLoop);
+
+  if (!constructionMode) {
+    buildRoomLayout();
+    requestAnimationFrame(gameLoop);
+  }
 })();
