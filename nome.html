@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0d1b2b">
+  <title>A História do Grande Tobias — Seu nome</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="name-page">
+  <main class="page-shell">
+    <section class="ad-slot" aria-label="Espaço reservado para publicidade">
+      <span>PUBLICIDADE</span>
+    </section>
+
+    <section class="game-stage">
+      <video class="hero-video" autoplay muted loop playsinline preload="auto">
+        <source src="tobias_intro.mp4" type="video/mp4">
+      </video>
+
+      <div class="name-overlay"></div>
+
+      <a class="back-link" href="index.html" aria-label="Voltar">‹</a>
+
+      <section class="name-panel">
+        <div class="mini-ornament">◆</div>
+        <h1>QUAL É O SEU NOME?</h1>
+        <p class="name-subtitle">
+          Esse será o nome da sua história no mundo do Grande Tobias.
+        </p>
+
+        <form class="name-form" id="nameForm" autocomplete="off">
+          <input
+            class="name-input"
+            id="playerName"
+            maxlength="30"
+            placeholder="Seu nome"
+            autocomplete="nickname"
+            autocapitalize="words"
+            enterkeyhint="done"
+            required
+          >
+          <button class="name-confirm" id="confirmName" type="submit">
+            CONFIRMAR
+          </button>
+        </form>
+
+        <div class="name-status" id="nameStatus" role="status" aria-live="polite"></div>
+
+        <section class="suggestion-box" id="suggestionBox">
+          <p class="suggestion-question">
+            Esse nome já está registrado.<br>
+            Pode ser <strong class="suggestion-name" id="suggestedName"></strong>?
+          </p>
+
+          <div class="suggestion-actions">
+            <button class="accept-name" id="acceptSuggested" type="button">SIM</button>
+            <button class="retry-name" id="retryName" type="button">TENTAR OUTRO NOME</button>
+          </div>
+        </section>
+      </section>
+      <audio id="nameMusic" src="tobias_theme.mp3" loop preload="auto"></audio>
+      <audio id="uiClickSound" src="ui_click.mp3" preload="auto"></audio>
+    </section>
+  </main>
+
+  <script src="backend-config.js"></script>
+  <script src="save-system.js"></script>
+  <script src="name-registry.js"></script>
+  <script src="nome.js"></script>
+</body>
+</html>
