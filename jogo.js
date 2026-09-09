@@ -51,6 +51,8 @@
   const inventoryPanel = document.getElementById("inventoryPanel");
 
   const uiClickSound = document.getElementById("uiClickSound");
+  const footstepSound1 = document.getElementById("footstepSound1");
+  const footstepSound2 = document.getElementById("footstepSound2");
   const closeSettings = document.getElementById("closeSettings");
 
   const musicSlider = document.getElementById("musicVolume");
@@ -985,12 +987,60 @@
     playerSpriteReady = true;
   });
 
+  // Pixel-level walkability map. White pixels = feet may stand there.
+  const walkMaskImage = new Image();
+  walkMaskImage.decoding = "async";
+  walkMaskImage.src = "room_walkable_mask.png";
+  let walkMaskReady = false;
+  let walkMaskWidth = ROOM_IMAGE_WIDTH;
+  let walkMaskHeight = ROOM_IMAGE_HEIGHT;
+  let walkMaskPixels = null;
+
+  walkMaskImage.addEventListener("load", () => {
+    const offscreen = document.createElement("canvas");
+    walkMaskWidth = walkMaskImage.naturalWidth || ROOM_IMAGE_WIDTH;
+    walkMaskHeight = walkMaskImage.naturalHeight || ROOM_IMAGE_HEIGHT;
+    offscreen.width = walkMaskWidth;
+    offscreen.height = walkMaskHeight;
+    const maskCtx = offscreen.getContext("2d", { willReadFrequently: true });
+    maskCtx.drawImage(walkMaskImage, 0, 0);
+    walkMaskPixels = maskCtx.getImageData(0, 0, walkMaskWidth, walkMaskHeight).data;
+    walkMaskReady = true;
+  });
+
+  // Original room cutouts redrawn over Tobias only when his feet are behind them.
+  // This creates correct depth without changing the approved room artwork.
+  const OCCLUDER_DEFS = [
+    ["occ_desk.png",118,292,292,266,550],
+    ["occ_nightstand.png",500,305,120,180,468],
+    ["occ_bed.png",585,270,350,405,660],
+    ["occ_chest.png",632,590,268,200,775],
+    ["occ_left_cushion.png",95,675,190,170,832],
+    ["occ_left_cabinet.png",0,735,275,430,1145],
+    ["occ_right_objects.png",735,715,252,250,945],
+    ["occ_right_cabinet.png",735,945,252,330,1250],
+    ["occ_lower_left.png",0,1080,310,345,1405],
+    ["occ_doorway.png",215,1115,550,370,1450]
+  ];
+
+  const roomOccluders = OCCLUDER_DEFS.map(([src,x,y,w,h,baseline]) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = src;
+    const entry = { image, x, y, w, h, baseline, ready: false };
+    image.addEventListener("load", () => { entry.ready = true; });
+    return entry;
+  });
+
   let exitTriggered = false;
   let lastTimestamp = 0;
   let nearDoor = false;
   let targetPulse = 0;
   let navigationTarget = null;
   let navigationPath = [];
+  let walkAnimationPhase = 0;
+  let footstepDistance = 0;
+  let footstepVariant = 0;
 
   let view = { width: 1170, height: 1890 };
   let world = { width: 2340, height: 3780 };
@@ -1005,59 +1055,11 @@
   };
 
   /*
-    Collisions tuned to the ACTUAL floor footprint of each object.
-    Important: wall art, rug surface and decorative overhangs do not block movement.
-    Tobias collides only with the physical base/footprint of furniture and walls.
+    Collision no longer uses broad rectangles or rough polygons.
+    The room_walkable_mask.png file is sampled directly at image-pixel level.
+    This prevents walking on walls, windows, books, lamps or outside the room,
+    while preserving every genuinely free patch of floor.
   */
-  const COLLISION_POLYGONS = [
-    // Back wall / upper non-walkable strip.
-    [[0.000,0.000],[1.000,0.000],[1.000,0.186],[0.000,0.186]],
-
-    // Desk + chair cluster (upper-left), shaped around the visible floor footprint.
-    [[0.083,0.191],[0.392,0.191],[0.392,0.292],[0.329,0.309],[0.311,0.350],[0.176,0.350],[0.163,0.316],[0.084,0.301]],
-
-    // Night stand beside the bed.
-    [[0.510,0.203],[0.612,0.203],[0.612,0.290],[0.510,0.290]],
-
-    // Bed footprint.
-    [[0.604,0.182],[0.917,0.182],[0.917,0.414],[0.620,0.414],[0.604,0.388]],
-
-    // Chest at the foot of the bed.
-    [[0.643,0.392],[0.895,0.392],[0.895,0.487],[0.650,0.487]],
-
-    // Left reading cushion / low pouf.
-    [[0.067,0.444],[0.261,0.444],[0.276,0.482],[0.255,0.525],[0.064,0.525],[0.052,0.490]],
-
-    // Tall lower-left cabinet and map board cluster.
-    [[0.000,0.493],[0.178,0.493],[0.226,0.527],[0.246,0.590],[0.193,0.688],[0.000,0.688]],
-
-    // Lower-left bookcase / drawers.
-    [[0.000,0.588],[0.176,0.588],[0.176,0.748],[0.000,0.748]],
-
-    // Sword / carrot crate / floor props in lower-left corner.
-    [[0.000,0.724],[0.133,0.724],[0.145,0.780],[0.130,0.833],[0.000,0.833]],
-
-    // Plush rabbit + book stack on the round rug. The rest of the rug stays walkable.
-    [[0.798,0.493],[0.943,0.493],[0.952,0.526],[0.940,0.574],[0.801,0.574],[0.786,0.538]],
-
-    // Plant just to the right of the round rug.
-    [[0.932,0.535],[1.000,0.535],[1.000,0.630],[0.937,0.630]],
-
-    // Lower-right cabinet / globe table.
-    [[0.742,0.620],[1.000,0.620],[1.000,0.781],[0.752,0.781],[0.727,0.733]],
-
-    // Thin left and right wall edges only.
-    [[0.000,0.186],[0.031,0.186],[0.031,0.903],[0.000,0.903]],
-    [[0.969,0.186],[1.000,0.186],[1.000,0.903],[0.969,0.903]],
-
-    // Doorway stone surround: side columns only. Center remains a valid exit path.
-    [[0.217,0.747],[0.390,0.747],[0.390,0.915],[0.282,0.915],[0.218,0.861]],
-    [[0.610,0.747],[0.783,0.747],[0.782,0.861],[0.716,0.915],[0.610,0.915]],
-
-    // Bottom dark wall areas, leaving the central carpet corridor completely open.
-    [[0.000,0.902],[0.383,0.902],[0.383,1.000],[0.000,1.000]],
-    [[0.617,0.902],[1.000,0.902],[1.000,1.000],[0.617,1.000]]
-  ];
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
@@ -1126,10 +1128,10 @@
 
     // Door in the bottom center of the artwork.
     doorZone = {
-      x: world.width * 0.415,
-      y: world.height * 0.855,
-      width: world.width * 0.170,
-      height: world.height * 0.100
+      x: world.width * 0.405,
+      y: world.height * 0.765,
+      width: world.width * 0.190,
+      height: world.height * 0.115
     };
 
     const loaded = returningFromConstruction ? null : loadRoomState();
@@ -1141,7 +1143,7 @@
     // First load: start on the clean floor where Tobias appears in the illustration.
     if (returningFromConstruction) {
       player.x = world.width * 0.500;
-      player.y = world.height * 0.705;
+      player.y = world.height * 0.700;
       try {
         const cleanUrl = `${window.location.pathname}`;
         window.history.replaceState({}, "", cleanUrl);
@@ -1152,7 +1154,7 @@
     }
 
     // Never spawn inside furniture after a layout change.
-    if (collides(player.x, player.y)) {
+    if (walkMaskReady && collides(player.x, player.y)) {
       const safe = nearestWalkablePoint(world.width * 0.48, world.height * 0.40);
       player.x = safe.x;
       player.y = safe.y;
@@ -1182,60 +1184,33 @@
     };
   }
 
-  function normalizedPolygonToWorld(points) {
-    return points.map(([x, y]) => ({
-      x: x * world.width,
-      y: y * world.height
-    }));
-  }
+  function walkableMaskValue(worldX, worldY) {
+    if (!walkMaskReady || !walkMaskPixels) return 0;
+    if (worldX < 0 || worldY < 0 || worldX >= world.width || worldY >= world.height) return 0;
 
-  function pointInPolygon(point, polygon) {
-    let inside = false;
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-      const xi = polygon[i].x;
-      const yi = polygon[i].y;
-      const xj = polygon[j].x;
-      const yj = polygon[j].y;
-      const intersects =
-        ((yi > point.y) !== (yj > point.y)) &&
-        (point.x < ((xj - xi) * (point.y - yi)) / ((yj - yi) || 1e-9) + xi);
-      if (intersects) inside = !inside;
-    }
-    return inside;
-  }
-
-  function pointSegmentDistance(point, a, b) {
-    const abx = b.x - a.x;
-    const aby = b.y - a.y;
-    const apx = point.x - a.x;
-    const apy = point.y - a.y;
-    const ab2 = abx * abx + aby * aby;
-    const t = ab2 > 0 ? clamp((apx * abx + apy * aby) / ab2, 0, 1) : 0;
-    const cx = a.x + abx * t;
-    const cy = a.y + aby * t;
-    return Math.hypot(point.x - cx, point.y - cy);
+    const sx = clamp(Math.floor((worldX / world.width) * walkMaskWidth), 0, walkMaskWidth - 1);
+    const sy = clamp(Math.floor((worldY / world.height) * walkMaskHeight), 0, walkMaskHeight - 1);
+    const index = (sy * walkMaskWidth + sx) * 4;
+    // Mask is grayscale; red channel is sufficient.
+    return walkMaskPixels[index];
   }
 
   function collides(nextX, nextY) {
-    // Collision is centered on the feet, not on Tobias's full artwork.
-    const foot = {
-      x: nextX,
-      y: nextY + player.radius * 0.22
-    };
-    const footRadius = Math.max(5, player.radius * 0.10);
+    // Before the mask is ready movement is intentionally blocked; no frame exists
+    // in which the player can briefly walk through scenery while assets load.
+    if (!walkMaskReady) return true;
 
-    for (const normalized of COLLISION_POLYGONS) {
-      const polygon = normalizedPolygonToWorld(normalized);
-      if (pointInPolygon(foot, polygon)) return true;
+    const rx = Math.max(4, player.radius * 0.13);
+    const ry = Math.max(3, player.radius * 0.075);
+    const footY = nextY + player.radius * 0.23;
 
-      for (let i = 0; i < polygon.length; i++) {
-        const a = polygon[i];
-        const b = polygon[(i + 1) % polygon.length];
-        if (pointSegmentDistance(foot, a, b) < footRadius) return true;
-      }
-    }
+    const samples = [
+      [0,0],[-rx,0],[rx,0],[0,-ry],[0,ry],
+      [-rx*0.72,-ry*0.72],[rx*0.72,-ry*0.72],
+      [-rx*0.72,ry*0.72],[rx*0.72,ry*0.72]
+    ];
 
-    return false;
+    return samples.some(([ox,oy]) => walkableMaskValue(nextX + ox, footY + oy) < 128);
   }
 
   function nearestWalkablePoint(targetX, targetY) {
@@ -1246,7 +1221,7 @@
       return { x: safeX, y: safeY };
     }
 
-    const step = Math.max(10, player.radius * 0.24);
+    const step = Math.max(8, player.radius * 0.18);
     const maxRadius = Math.max(view.width, view.height) * 0.65;
 
     for (let radius = step; radius <= maxRadius; radius += step) {
@@ -1442,18 +1417,19 @@
     const x = player.x;
     const y = player.y;
     const r = player.radius;
-    const bob = navigationPath.length ? Math.sin(performance.now() / 95) * r * 0.028 : 0;
+    const walking = navigationPath.length > 0;
+
+    // Small walk cycle from the approved static artwork: alternating body sway,
+    // bounce and squash. There is deliberately NO floating/contact shadow.
+    const phase = walkAnimationPhase;
+    const bob = walking ? Math.abs(Math.sin(phase)) * r * 0.065 : 0;
+    const sway = walking ? Math.sin(phase) * 0.035 : 0;
+    const squash = walking ? 1 + Math.cos(phase * 2) * 0.018 : 1;
 
     ctx.save();
-    ctx.translate(x, y + bob);
-
-    const shadow = ctx.createRadialGradient(0, r * 0.54, r * 0.06, 0, r * 0.54, r * 0.62);
-    shadow.addColorStop(0, "rgba(0,0,0,.30)");
-    shadow.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = shadow;
-    ctx.beginPath();
-    ctx.ellipse(0, r * 0.58, r * 0.48, r * 0.16, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.translate(x, y - bob);
+    ctx.rotate(sway);
+    ctx.scale(1 / squash, squash);
 
     if (playerSpriteReady) {
       const naturalW = playerSprite.naturalWidth || 1024;
@@ -1464,8 +1440,7 @@
 
       ctx.save();
       ctx.scale(flip, 1);
-      const drawX = flip === 1 ? -spriteWidth / 2 : -(spriteWidth / 2);
-      ctx.drawImage(playerSprite, drawX, -spriteHeight * 0.80, spriteWidth, spriteHeight);
+      ctx.drawImage(playerSprite, -spriteWidth / 2, -spriteHeight * 0.80, spriteWidth, spriteHeight);
       ctx.restore();
     } else {
       ctx.fillStyle = "#fff";
@@ -1475,6 +1450,24 @@
     }
 
     ctx.restore();
+  }
+
+  function drawOccludersInFrontOfPlayer() {
+    if (!roomBackgroundReady) return;
+    const sourceW = roomBackground.naturalWidth || ROOM_IMAGE_WIDTH;
+    const sourceH = roomBackground.naturalHeight || ROOM_IMAGE_HEIGHT;
+    const playerSourceY = (player.y / world.height) * sourceH;
+
+    for (const occ of roomOccluders) {
+      if (!occ.ready || playerSourceY >= occ.baseline) continue;
+      ctx.drawImage(
+        occ.image,
+        (occ.x / sourceW) * world.width,
+        (occ.y / sourceH) * world.height,
+        (occ.w / sourceW) * world.width,
+        (occ.h / sourceH) * world.height
+      );
+    }
   }
 
   function renderRoom() {
@@ -1517,7 +1510,17 @@
     }
 
     drawPlayer();
+    drawOccludersInFrontOfPlayer();
     ctx.restore();
+  }
+
+  function playFootstep() {
+    if (audio.sfxMuted) return;
+    const sound = footstepVariant++ % 2 === 0 ? footstepSound1 : footstepSound2;
+    if (!sound) return;
+    sound.volume = Math.max(0, Math.min(1, audio.sfxVolume * 0.34));
+    try { sound.currentTime = 0; } catch {}
+    sound.play().catch(() => {});
   }
 
   function updatePlayer(dt) {
@@ -1526,12 +1529,15 @@
       const dx = waypoint.x - player.x;
       const dy = waypoint.y - player.y;
       const distance = Math.hypot(dx, dy);
-      const speed = Math.min(world.width, world.height) * 0.228;
+      const speed = Math.min(world.width, world.height) * 0.228; // +20% versus the original 0.19
       const step = speed * dt;
 
       if (distance <= Math.max(3, step)) {
+        const moved = Math.hypot(waypoint.x - player.x, waypoint.y - player.y);
         player.x = waypoint.x;
         player.y = waypoint.y;
+        walkAnimationPhase += dt * 12.5;
+        footstepDistance += moved;
         navigationPath.shift();
       } else if (distance > 0) {
         const vx = dx / distance;
@@ -1547,14 +1553,26 @@
         const nextY = player.y + vy * step;
 
         if (!collides(nextX, nextY)) {
+          const moved = Math.hypot(nextX - player.x, nextY - player.y);
           player.x = nextX;
           player.y = nextY;
+          walkAnimationPhase += dt * 12.5;
+          footstepDistance += moved;
+          const stepSpacing = Math.max(34, player.radius * 0.88);
+          if (footstepDistance >= stepSpacing) {
+            footstepDistance %= stepSpacing;
+            playFootstep();
+          }
         } else if (navigationTarget) {
           navigationPath = findPath({ x: player.x, y: player.y }, navigationTarget);
         } else {
           navigationPath = [];
         }
       }
+    }
+
+    if (!navigationPath.length) {
+      footstepDistance = 0;
     }
 
     targetPulse = Math.max(0, targetPulse - dt * 0.85);
@@ -1568,7 +1586,7 @@
       !constructionMode &&
       nearDoor &&
       !exitTriggered &&
-      player.y > world.height * 0.895
+      player.y > world.height * 0.825
     ) {
       exitTriggered = true;
       saveRoomState();
@@ -1577,7 +1595,7 @@
   }
 
   roomCanvas.addEventListener("pointerdown", event => {
-    if (anyBlockingOverlayOpen()) return;
+    if (anyBlockingOverlayOpen() || !walkMaskReady) return;
 
     const rect = roomCanvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;

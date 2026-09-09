@@ -31,3 +31,13 @@ UPDATE — colisões e retorno ao quarto
 - fallback de retorno também usa sessionStorage;
 - velocidade de caminhada aumentada em 20% (0.19 -> 0.228);
 - usa quarto_tobias_hd.png e tobias_player_sprite_hd.png da última versão visual.
+
+
+UPDATE — PIXEL COLLISION / DEPTH / WALKING
+- room_walkable_mask.png: mapa de colisão por pixel; branco = caminhável, preto = bloqueado.
+- Objetos do cenário são redesenhados em primeiro plano quando Tobias passa atrás deles.
+- Sem sombra artificial embaixo do personagem.
+- Pequena animação de caminhada (oscilação/bounce/squash) aplicada ao sprite HD aprovado.
+- Dois passos de madeira originais: tobias_footstep_wood_1.ogg e tobias_footstep_wood_2.ogg.
+- Velocidade mantida em +20% (0.228 vs 0.19).
+- Retorno do cômodo em construção reaparece acima da zona de saída para evitar loop.
