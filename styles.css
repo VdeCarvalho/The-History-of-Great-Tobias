@@ -2031,3 +2031,38 @@ body.game-page.chat-keyboard-open
 .construction-page .item-detail-panel,
 .construction-page .chat-panel,
 .construction-page .danger-dialog { z-index: 30; }
+
+
+/* =========================================================
+   PLAYABLE ROOM — VISUAL POLISH
+   ========================================================= */
+.game-page .room-canvas {
+  image-rendering: auto;
+}
+.game-page .player-chip {
+  border-radius: 12px;
+  padding: .56em .88em;
+  background: linear-gradient(180deg, rgba(24,31,42,.94), rgba(8,13,21,.92));
+  border: 1px solid rgba(217,184,111,.58);
+  color: #fff0bd;
+  box-shadow: 0 5px 18px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.07);
+}
+.game-page .round-game-button {
+  background: linear-gradient(180deg, rgba(30,38,51,.94), rgba(9,14,23,.94));
+  border-color: rgba(222,190,115,.70);
+  box-shadow: 0 5px 16px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.game-page .point-click-hint {
+  left: auto;
+  right: 3%;
+  bottom: 2.6%;
+  transform: none;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(30,38,51,.88), rgba(9,14,23,.90));
+}
+.game-page .point-click-hint.used {
+  transform: translateY(8px);
+}
+@media (max-width: 560px) {
+  .game-page .point-click-hint { right: 15%; max-width: 48%; text-align: center; }
+}

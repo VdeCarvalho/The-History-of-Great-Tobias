@@ -987,6 +987,16 @@
     playerSpriteReady = true;
   });
 
+  const walkFrames = Array.from({ length: 6 }, (_, index) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = `tobias_walk_${index}.png`;
+    return { image, ready: false };
+  });
+  walkFrames.forEach(frame => {
+    frame.image.addEventListener("load", () => { frame.ready = true; });
+  });
+
   // Pixel-level walkability map. White pixels = feet may stand there.
   const walkMaskImage = new Image();
   walkMaskImage.decoding = "async";
@@ -1124,7 +1134,7 @@
     world.width = sourceWidth * scale;
     world.height = sourceHeight * scale;
 
-    player.radius = Math.max(40, view.width * 0.068);
+    player.radius = Math.max(28, view.width * 0.045);
 
     // Door in the bottom center of the artwork.
     doorZone = {
@@ -1409,8 +1419,8 @@
     }
 
     // Smooth follow camera.
-    camera.x += (targetX - camera.x) * 0.12;
-    camera.y += (targetY - camera.y) * 0.12;
+    camera.x += (targetX - camera.x) * 0.16;
+    camera.y += (targetY - camera.y) * 0.16;
   }
 
   function drawPlayer() {
@@ -1419,33 +1429,37 @@
     const r = player.radius;
     const walking = navigationPath.length > 0;
 
-    // Small walk cycle from the approved static artwork: alternating body sway,
-    // bounce and squash. There is deliberately NO floating/contact shadow.
     const phase = walkAnimationPhase;
-    const bob = walking ? Math.abs(Math.sin(phase)) * r * 0.065 : 0;
-    const sway = walking ? Math.sin(phase) * 0.035 : 0;
-    const squash = walking ? 1 + Math.cos(phase * 2) * 0.018 : 1;
+    const bob = walking ? Math.abs(Math.sin(phase)) * r * 0.045 : Math.sin(performance.now() / 650) * r * 0.006;
+    const lean = walking ? Math.sin(phase) * 0.012 : 0;
+
+    let activeImage = playerSprite;
+    if (walking) {
+      const frameIndex = Math.floor((phase / (Math.PI * 2)) * 6) % 6;
+      const frame = walkFrames[(frameIndex + 6) % 6];
+      if (frame?.ready) activeImage = frame.image;
+    }
 
     ctx.save();
     ctx.translate(x, y - bob);
-    ctx.rotate(sway);
-    ctx.scale(1 / squash, squash);
+    ctx.rotate(lean);
 
-    if (playerSpriteReady) {
-      const naturalW = playerSprite.naturalWidth || 1024;
-      const naturalH = playerSprite.naturalHeight || 1536;
+    const ready = activeImage === playerSprite ? playerSpriteReady : true;
+    if (ready && activeImage.naturalWidth) {
+      const naturalW = activeImage.naturalWidth || 512;
+      const naturalH = activeImage.naturalHeight || 768;
       const spriteHeight = r * 3.10;
       const spriteWidth = spriteHeight * (naturalW / naturalH);
       const flip = player.facing === "left" ? -1 : 1;
 
       ctx.save();
       ctx.scale(flip, 1);
-      ctx.drawImage(playerSprite, -spriteWidth / 2, -spriteHeight * 0.80, spriteWidth, spriteHeight);
+      ctx.drawImage(activeImage, -spriteWidth / 2, -spriteHeight * 0.80, spriteWidth, spriteHeight);
       ctx.restore();
     } else {
       ctx.fillStyle = "#fff";
       ctx.beginPath();
-      ctx.arc(0, 0, r * 0.40, 0, Math.PI * 2);
+      ctx.arc(0, 0, r * 0.36, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -1536,7 +1550,7 @@
         const moved = Math.hypot(waypoint.x - player.x, waypoint.y - player.y);
         player.x = waypoint.x;
         player.y = waypoint.y;
-        walkAnimationPhase += dt * 12.5;
+        walkAnimationPhase = (walkAnimationPhase + dt * 10.8) % (Math.PI * 2);
         footstepDistance += moved;
         navigationPath.shift();
       } else if (distance > 0) {
@@ -1556,7 +1570,7 @@
           const moved = Math.hypot(nextX - player.x, nextY - player.y);
           player.x = nextX;
           player.y = nextY;
-          walkAnimationPhase += dt * 12.5;
+          walkAnimationPhase = (walkAnimationPhase + dt * 10.8) % (Math.PI * 2);
           footstepDistance += moved;
           const stepSpacing = Math.max(34, player.radius * 0.88);
           if (footstepDistance >= stepSpacing) {
