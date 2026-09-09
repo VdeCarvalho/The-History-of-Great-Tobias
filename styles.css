@@ -1835,3 +1835,142 @@ body.game-page.chat-keyboard-open
   opacity: 0 !important;
   margin: 0 !important;
 }
+
+
+/* =========================================================
+   QUARTO DO TOBIAS — AMBIENTE JOGÁVEL
+   ========================================================= */
+.room-scene-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,.08), transparent 38%),
+    linear-gradient(180deg, #caa468 0%, #a47847 100%);
+}
+
+.room-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.room-exit-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 14%;
+  transform: translateX(-50%);
+  z-index: 7;
+  padding: .5em .9em;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 235, 173, .6);
+  background: rgba(18, 34, 45, .62);
+  color: #ffecae;
+  font: 700 clamp(10px, 2.8vw, 24px) Georgia, "Times New Roman", serif;
+  letter-spacing: .08em;
+  box-shadow: 0 5px 18px rgba(0,0,0,.28);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.room-exit-hint.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+
+.hud-hidden .player-chip,
+.hud-hidden .game-left-menu,
+.hud-hidden .game-side-menu > :not(.settings-toggle) {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity 1s ease, visibility 1s ease, transform 1s ease;
+}
+
+.player-chip,
+.game-left-menu,
+.game-side-menu > * {
+  transition: opacity 1s ease, visibility 1s ease, transform 1s ease;
+}
+
+.construction-stage {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255,255,255,.08), transparent 28%),
+    linear-gradient(180deg, #294762 0%, #14273a 52%, #0b1520 100%);
+}
+
+.construction-panel {
+  width: min(82%, 780px);
+  padding: clamp(26px, 7vw, 76px);
+  border-radius: clamp(18px, 3vw, 34px);
+  border: 1px solid rgba(236, 201, 103, .42);
+  background: linear-gradient(180deg, rgba(15,30,44,.92), rgba(6,14,21,.94));
+  box-shadow: 0 18px 42px rgba(0,0,0,.36), inset 0 0 30px rgba(255,219,123,.04);
+  text-align: center;
+}
+
+.construction-panel .mini-ornament {
+  color: #e7c86a;
+  font-size: clamp(15px, 4vw, 42px);
+  margin-bottom: .2em;
+}
+
+.construction-panel h1 {
+  margin: 0;
+  color: #f5e8bd;
+  font-size: clamp(28px, 8vw, 88px);
+  line-height: 1;
+}
+
+.construction-panel p {
+  margin: .7em 0 0;
+  font-size: clamp(14px, 3.5vw, 28px);
+  color: rgba(255,255,255,.85);
+}
+
+.construction-subcopy {
+  color: rgba(255,255,255,.64) !important;
+}
+
+.construction-back {
+  margin-top: clamp(20px, 6vw, 48px);
+}
+
+
+
+/* =========================================================
+   POINT-AND-CLICK NAVIGATION
+   ========================================================= */
+.room-canvas {
+  cursor: crosshair;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.point-click-hint {
+  position: absolute;
+  z-index: 7;
+  left: 50%;
+  bottom: 3.1%;
+  transform: translateX(-50%);
+  padding: .46em .9em;
+  border-radius: 999px;
+  border: 1px solid rgba(249, 223, 140, .30);
+  background: rgba(5,16,24,.52);
+  color: rgba(255,245,206,.88);
+  font: 650 clamp(9px, 2.6vw, 17px) Arial, sans-serif;
+  letter-spacing: .035em;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  transition: opacity .45s ease, transform .45s ease;
+}
+
+.point-click-hint.used {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+}
