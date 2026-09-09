@@ -12,6 +12,14 @@
   const AUDIO_KEY = "tobias_audio_settings_v1";
   const GAME_STATE_KEY = "tobias_game_state_v1";
   const constructionMode = document.body.classList.contains("construction-page");
+  const urlParams = new URLSearchParams(window.location.search);
+  const returningFromConstruction =
+    urlParams.get("from") === "construction" ||
+    sessionStorage.getItem("tobias_return_from_construction") === "1";
+
+  if (returningFromConstruction) {
+    try { sessionStorage.removeItem("tobias_return_from_construction"); } catch {}
+  }
 
   const gameplayStage = document.getElementById("gameplayStage");
   const playerChip = document.getElementById("playerChip");
@@ -969,6 +977,14 @@
     roomBackgroundReady = true;
   });
 
+  const playerSprite = new Image();
+  playerSprite.decoding = "async";
+  playerSprite.src = "tobias_player_sprite_hd.png";
+  let playerSpriteReady = false;
+  playerSprite.addEventListener("load", () => {
+    playerSpriteReady = true;
+  });
+
   let exitTriggered = false;
   let lastTimestamp = 0;
   let nearDoor = false;
@@ -989,49 +1005,58 @@
   };
 
   /*
-    Rectangles are stored as fractions of the HD artwork.
-    They match furniture / walls that should not be walkable.
-    The large central blue carpet remains walkable.
+    Collisions tuned to the ACTUAL floor footprint of each object.
+    Important: wall art, rug surface and decorative overhangs do not block movement.
+    Tobias collides only with the physical base/footprint of furniture and walls.
   */
-  const COLLISION_RECTS = [
-    // top wall / decorations
-    [0.00, 0.00, 1.00, 0.205],
+  const COLLISION_POLYGONS = [
+    // Back wall / upper non-walkable strip.
+    [[0.000,0.000],[1.000,0.000],[1.000,0.186],[0.000,0.186]],
 
-    // desk + chair area, upper-left
-    [0.075, 0.185, 0.360, 0.365],
+    // Desk + chair cluster (upper-left), shaped around the visible floor footprint.
+    [[0.083,0.191],[0.392,0.191],[0.392,0.292],[0.329,0.309],[0.311,0.350],[0.176,0.350],[0.163,0.316],[0.084,0.301]],
 
-    // bed + night stand, upper-right
-    [0.555, 0.170, 0.375, 0.300],
+    // Night stand beside the bed.
+    [[0.510,0.203],[0.612,0.203],[0.612,0.290],[0.510,0.290]],
 
-    // chest at foot of bed
-    [0.600, 0.370, 0.285, 0.135],
+    // Bed footprint.
+    [[0.604,0.182],[0.917,0.182],[0.917,0.414],[0.620,0.414],[0.604,0.388]],
 
-    // left window cushion / book cushion
-    [0.055, 0.430, 0.245, 0.135],
+    // Chest at the foot of the bed.
+    [[0.643,0.392],[0.895,0.392],[0.895,0.487],[0.650,0.487]],
 
-    // cabinet on left side
-    [0.000, 0.485, 0.245, 0.285],
+    // Left reading cushion / low pouf.
+    [[0.067,0.444],[0.261,0.444],[0.276,0.482],[0.255,0.525],[0.064,0.525],[0.052,0.490]],
 
-    // round rug / plush rabbit at right
-    [0.750, 0.455, 0.250, 0.145],
+    // Tall lower-left cabinet and map board cluster.
+    [[0.000,0.493],[0.178,0.493],[0.226,0.527],[0.246,0.590],[0.193,0.688],[0.000,0.688]],
 
-    // lower-right cabinet / table
-    [0.735, 0.615, 0.265, 0.180],
+    // Lower-left bookcase / drawers.
+    [[0.000,0.588],[0.176,0.588],[0.176,0.748],[0.000,0.748]],
 
-    // lower-left shelves / carrot corner
-    [0.000, 0.665, 0.260, 0.205],
+    // Sword / carrot crate / floor props in lower-left corner.
+    [[0.000,0.724],[0.133,0.724],[0.145,0.780],[0.130,0.833],[0.000,0.833]],
 
-    // stone doorway surround — left and right columns
-    [0.245, 0.735, 0.185, 0.205],
-    [0.575, 0.735, 0.190, 0.205],
+    // Plush rabbit + book stack on the round rug. The rest of the rug stays walkable.
+    [[0.798,0.493],[0.943,0.493],[0.952,0.526],[0.940,0.574],[0.801,0.574],[0.786,0.538]],
 
-    // extreme left/right wall edges below the top area
-    [0.000, 0.205, 0.055, 0.795],
-    [0.945, 0.205, 0.055, 0.795],
+    // Plant just to the right of the round rug.
+    [[0.932,0.535],[1.000,0.535],[1.000,0.630],[0.937,0.630]],
 
-    // bottom outside the central doorway
-    [0.000, 0.915, 0.405, 0.085],
-    [0.600, 0.915, 0.400, 0.085]
+    // Lower-right cabinet / globe table.
+    [[0.742,0.620],[1.000,0.620],[1.000,0.781],[0.752,0.781],[0.727,0.733]],
+
+    // Thin left and right wall edges only.
+    [[0.000,0.186],[0.031,0.186],[0.031,0.903],[0.000,0.903]],
+    [[0.969,0.186],[1.000,0.186],[1.000,0.903],[0.969,0.903]],
+
+    // Doorway stone surround: side columns only. Center remains a valid exit path.
+    [[0.217,0.747],[0.390,0.747],[0.390,0.915],[0.282,0.915],[0.218,0.861]],
+    [[0.610,0.747],[0.783,0.747],[0.782,0.861],[0.716,0.915],[0.610,0.915]],
+
+    // Bottom dark wall areas, leaving the central carpet corridor completely open.
+    [[0.000,0.902],[0.383,0.902],[0.383,1.000],[0.000,1.000]],
+    [[0.617,0.902],[1.000,0.902],[1.000,1.000],[0.617,1.000]]
   ];
 
   function clamp(value, min, max) {
@@ -1085,40 +1110,50 @@
     roomCanvas.style.width = `${view.width}px`;
     roomCanvas.style.height = `${view.height}px`;
 
+    const sourceWidth = roomBackground.naturalWidth || ROOM_IMAGE_WIDTH;
+    const sourceHeight = roomBackground.naturalHeight || ROOM_IMAGE_HEIGHT;
+
     // Preserve the original artwork ratio and guarantee at least 2x2 screens.
     const scale = Math.max(
-      (view.width * 2) / ROOM_IMAGE_WIDTH,
-      (view.height * 2) / ROOM_IMAGE_HEIGHT
+      (view.width * 2) / sourceWidth,
+      (view.height * 2) / sourceHeight
     );
 
-    world.width = ROOM_IMAGE_WIDTH * scale;
-    world.height = ROOM_IMAGE_HEIGHT * scale;
+    world.width = sourceWidth * scale;
+    world.height = sourceHeight * scale;
 
-    player.radius = Math.max(44, view.width * 0.075);
+    player.radius = Math.max(40, view.width * 0.068);
 
     // Door in the bottom center of the artwork.
     doorZone = {
-      x: world.width * 0.405,
-      y: world.height * 0.845,
-      width: world.width * 0.195,
-      height: world.height * 0.125
+      x: world.width * 0.415,
+      y: world.height * 0.855,
+      width: world.width * 0.170,
+      height: world.height * 0.100
     };
 
-    const loaded = loadRoomState();
+    const loaded = returningFromConstruction ? null : loadRoomState();
     const spawn = loaded || previous || { x: 0.50, y: 0.40 };
 
-    player.x = clamp(spawn.x * world.width, world.width * 0.08, world.width * 0.92);
-    player.y = clamp(spawn.y * world.height, world.height * 0.23, world.height * 0.91);
+    player.x = clamp(spawn.x * world.width, world.width * 0.06, world.width * 0.94);
+    player.y = clamp(spawn.y * world.height, world.height * 0.06, world.height * 0.92);
 
     // First load: start on the clean floor where Tobias appears in the illustration.
-    if (!loaded && (!previous.x || !previous.y)) {
-      player.x = world.width * 0.465;
-      player.y = world.height * 0.390;
+    if (returningFromConstruction) {
+      player.x = world.width * 0.500;
+      player.y = world.height * 0.705;
+      try {
+        const cleanUrl = `${window.location.pathname}`;
+        window.history.replaceState({}, "", cleanUrl);
+      } catch {}
+    } else if (!loaded && (!previous.x || !previous.y)) {
+      player.x = world.width * 0.470;
+      player.y = world.height * 0.380;
     }
 
     // Never spawn inside furniture after a layout change.
     if (collides(player.x, player.y)) {
-      const safe = nearestWalkablePoint(world.width * 0.47, world.height * 0.395);
+      const safe = nearestWalkablePoint(world.width * 0.48, world.height * 0.40);
       player.x = safe.x;
       player.y = safe.y;
     }
@@ -1138,26 +1173,69 @@
   }
 
   function playerBounds(nextX = player.x, nextY = player.y) {
+    // Tiny foot-contact box: the visible body/ears do not artificially enlarge collisions.
     return {
-      x: nextX - player.radius * 0.43,
-      y: nextY - player.radius * 0.18,
-      width: player.radius * 0.86,
-      height: player.radius * 0.54
+      x: nextX - player.radius * 0.18,
+      y: nextY + player.radius * 0.10,
+      width: player.radius * 0.36,
+      height: player.radius * 0.25
     };
   }
 
-  function solidObstacles() {
-    return COLLISION_RECTS.map(([x, y, width, height]) => ({
+  function normalizedPolygonToWorld(points) {
+    return points.map(([x, y]) => ({
       x: x * world.width,
-      y: y * world.height,
-      width: width * world.width,
-      height: height * world.height
+      y: y * world.height
     }));
   }
 
+  function pointInPolygon(point, polygon) {
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const xi = polygon[i].x;
+      const yi = polygon[i].y;
+      const xj = polygon[j].x;
+      const yj = polygon[j].y;
+      const intersects =
+        ((yi > point.y) !== (yj > point.y)) &&
+        (point.x < ((xj - xi) * (point.y - yi)) / ((yj - yi) || 1e-9) + xi);
+      if (intersects) inside = !inside;
+    }
+    return inside;
+  }
+
+  function pointSegmentDistance(point, a, b) {
+    const abx = b.x - a.x;
+    const aby = b.y - a.y;
+    const apx = point.x - a.x;
+    const apy = point.y - a.y;
+    const ab2 = abx * abx + aby * aby;
+    const t = ab2 > 0 ? clamp((apx * abx + apy * aby) / ab2, 0, 1) : 0;
+    const cx = a.x + abx * t;
+    const cy = a.y + aby * t;
+    return Math.hypot(point.x - cx, point.y - cy);
+  }
+
   function collides(nextX, nextY) {
-    const bounds = playerBounds(nextX, nextY);
-    return solidObstacles().some(obstacle => rectsOverlap(bounds, obstacle));
+    // Collision is centered on the feet, not on Tobias's full artwork.
+    const foot = {
+      x: nextX,
+      y: nextY + player.radius * 0.22
+    };
+    const footRadius = Math.max(5, player.radius * 0.10);
+
+    for (const normalized of COLLISION_POLYGONS) {
+      const polygon = normalizedPolygonToWorld(normalized);
+      if (pointInPolygon(foot, polygon)) return true;
+
+      for (let i = 0; i < polygon.length; i++) {
+        const a = polygon[i];
+        const b = polygon[(i + 1) % polygon.length];
+        if (pointSegmentDistance(foot, a, b) < footRadius) return true;
+      }
+    }
+
+    return false;
   }
 
   function nearestWalkablePoint(targetX, targetY) {
@@ -1168,8 +1246,8 @@
       return { x: safeX, y: safeY };
     }
 
-    const step = Math.max(20, player.radius * 0.50);
-    const maxRadius = Math.max(view.width, view.height) * 0.55;
+    const step = Math.max(10, player.radius * 0.24);
+    const maxRadius = Math.max(view.width, view.height) * 0.65;
 
     for (let radius = step; radius <= maxRadius; radius += step) {
       const samples = Math.max(16, Math.ceil((Math.PI * 2 * radius) / step));
@@ -1186,7 +1264,7 @@
 
   function segmentClear(a, b) {
     const distance = Math.hypot(b.x - a.x, b.y - a.y);
-    const steps = Math.max(1, Math.ceil(distance / Math.max(14, player.radius * 0.32)));
+    const steps = Math.max(1, Math.ceil(distance / Math.max(7, player.radius * 0.16)));
 
     for (let i = 1; i <= steps; i++) {
       const t = i / steps;
@@ -1205,7 +1283,7 @@
       return [target];
     }
 
-    const cell = Math.max(28, Math.min(58, Math.min(view.width, view.height) * 0.06));
+    const cell = Math.max(16, Math.min(32, Math.min(view.width, view.height) * 0.034));
     const cols = Math.ceil(world.width / cell);
     const rows = Math.ceil(world.height / cell);
 
@@ -1364,159 +1442,37 @@
     const x = player.x;
     const y = player.y;
     const r = player.radius;
-    const bob = navigationPath.length ? Math.sin(performance.now() / 85) * r * 0.035 : 0;
+    const bob = navigationPath.length ? Math.sin(performance.now() / 95) * r * 0.028 : 0;
 
     ctx.save();
     ctx.translate(x, y + bob);
 
-    // Soft contact shadow.
-    const shadow = ctx.createRadialGradient(0, r * 0.54, r * 0.08, 0, r * 0.54, r * 0.62);
-    shadow.addColorStop(0, "rgba(0,0,0,.34)");
+    const shadow = ctx.createRadialGradient(0, r * 0.54, r * 0.06, 0, r * 0.54, r * 0.62);
+    shadow.addColorStop(0, "rgba(0,0,0,.30)");
     shadow.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = shadow;
     ctx.beginPath();
-    ctx.ellipse(0, r * 0.54, r * 0.62, r * 0.22, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, r * 0.58, r * 0.48, r * 0.16, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Blue cape behind the body.
-    ctx.fillStyle = "#365f9f";
-    ctx.strokeStyle = "#243c66";
-    ctx.lineWidth = Math.max(2, r * 0.045);
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.25, -r * 0.05);
-    ctx.quadraticCurveTo(-r * 0.82, r * 0.20, -r * 0.54, r * 0.88);
-    ctx.quadraticCurveTo(-r * 0.05, r * 0.72, r * 0.24, r * 0.22);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+    if (playerSpriteReady) {
+      const naturalW = playerSprite.naturalWidth || 1024;
+      const naturalH = playerSprite.naturalHeight || 1536;
+      const spriteHeight = r * 3.10;
+      const spriteWidth = spriteHeight * (naturalW / naturalH);
+      const flip = player.facing === "left" ? -1 : 1;
 
-    // Body / tunic.
-    const bodyGrad = ctx.createLinearGradient(0, -r * 0.05, 0, r * 0.72);
-    bodyGrad.addColorStop(0, "#fdf9f0");
-    bodyGrad.addColorStop(1, "#d9d5ce");
-    ctx.fillStyle = bodyGrad;
-    ctx.strokeStyle = "#747b84";
-    ctx.beginPath();
-    ctx.ellipse(0, r * 0.26, r * 0.42, r * 0.52, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Small blue tunic / belt.
-    ctx.fillStyle = "#284f83";
-    ctx.fillRect(-r * 0.34, r * 0.19, r * 0.68, r * 0.28);
-    ctx.fillStyle = "#c8922e";
-    ctx.fillRect(-r * 0.35, r * 0.37, r * 0.70, r * 0.08);
-
-    // Feet.
-    ctx.fillStyle = "#a8adb5";
-    ctx.beginPath();
-    ctx.ellipse(-r * 0.18, r * 0.72, r * 0.20, r * 0.12, 0, 0, Math.PI * 2);
-    ctx.ellipse(r * 0.18, r * 0.72, r * 0.20, r * 0.12, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Ears, behind helmet.
-    ctx.fillStyle = "#fff9f1";
-    ctx.strokeStyle = "#d9c8bf";
-    ctx.beginPath();
-    ctx.ellipse(-r * 0.22, -r * 0.74, r * 0.13, r * 0.39, -0.28, 0, Math.PI * 2);
-    ctx.ellipse(r * 0.22, -r * 0.74, r * 0.13, r * 0.39, 0.28, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = "#f2c3c2";
-    ctx.beginPath();
-    ctx.ellipse(-r * 0.22, -r * 0.74, r * 0.055, r * 0.25, -0.28, 0, Math.PI * 2);
-    ctx.ellipse(r * 0.22, -r * 0.74, r * 0.055, r * 0.25, 0.28, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Head.
-    ctx.fillStyle = "#fffaf3";
-    ctx.strokeStyle = "#cfc6bd";
-    ctx.lineWidth = Math.max(2, r * 0.035);
-    ctx.beginPath();
-    ctx.ellipse(0, -r * 0.27, r * 0.43, r * 0.40, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Helmet.
-    const helmetGrad = ctx.createLinearGradient(0, -r * 0.68, 0, -r * 0.18);
-    helmetGrad.addColorStop(0, "#edf0f4");
-    helmetGrad.addColorStop(0.45, "#b6bdc8");
-    helmetGrad.addColorStop(1, "#777f8b");
-    ctx.fillStyle = helmetGrad;
-    ctx.strokeStyle = "#515864";
-    ctx.beginPath();
-    ctx.arc(0, -r * 0.34, r * 0.44, Math.PI, Math.PI * 2);
-    ctx.lineTo(r * 0.43, -r * 0.22);
-    ctx.lineTo(-r * 0.43, -r * 0.22);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Helmet ribs.
-    ctx.strokeStyle = "rgba(70,77,88,.82)";
-    ctx.lineWidth = Math.max(2, r * 0.035);
-    for (const offset of [-0.24, -0.08, 0.08, 0.24]) {
+      ctx.save();
+      ctx.scale(flip, 1);
+      const drawX = flip === 1 ? -spriteWidth / 2 : -(spriteWidth / 2);
+      ctx.drawImage(playerSprite, drawX, -spriteHeight * 0.80, spriteWidth, spriteHeight);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = "#fff";
       ctx.beginPath();
-      ctx.moveTo(r * offset, -r * 0.63);
-      ctx.lineTo(r * offset * 1.2, -r * 0.31);
-      ctx.stroke();
+      ctx.arc(0, 0, r * 0.40, 0, Math.PI * 2);
+      ctx.fill();
     }
-
-    // Face.
-    const faceShift = player.facing === "left" ? -r * 0.045 : player.facing === "right" ? r * 0.045 : 0;
-    ctx.fillStyle = "#25282c";
-    ctx.beginPath();
-    ctx.arc(-r * 0.13 + faceShift, -r * 0.24, r * 0.033, 0, Math.PI * 2);
-    ctx.arc(r * 0.13 + faceShift, -r * 0.24, r * 0.033, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#f0a8a8";
-    ctx.beginPath();
-    ctx.arc(0 + faceShift * 0.35, -r * 0.12, r * 0.045, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#a96f72";
-    ctx.lineWidth = Math.max(1.5, r * 0.025);
-    ctx.beginPath();
-    ctx.arc(0, -r * 0.07, r * 0.12, 0.15, Math.PI - 0.15);
-    ctx.stroke();
-
-    // Shield on the right.
-    ctx.fillStyle = "#2f5a96";
-    ctx.strokeStyle = "#c9932c";
-    ctx.lineWidth = Math.max(3, r * 0.055);
-    ctx.beginPath();
-    ctx.moveTo(r * 0.39, r * 0.03);
-    ctx.lineTo(r * 0.72, r * 0.10);
-    ctx.lineTo(r * 0.68, r * 0.52);
-    ctx.quadraticCurveTo(r * 0.54, r * 0.68, r * 0.40, r * 0.52);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#e2b348";
-    ctx.beginPath();
-    ctx.ellipse(r * 0.54, r * 0.31, r * 0.08, r * 0.11, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Sword on the left.
-    ctx.save();
-    ctx.rotate(-0.64);
-    ctx.fillStyle = "#e4e7ec";
-    ctx.strokeStyle = "#767d88";
-    ctx.lineWidth = Math.max(1.5, r * 0.025);
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.82, r * 0.04);
-    ctx.lineTo(-r * 0.24, -r * 0.01);
-    ctx.lineTo(-r * 0.24, r * 0.09);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.strokeStyle = "#c18d2c";
-    ctx.lineWidth = Math.max(3, r * 0.05);
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.23, -r * 0.03);
-    ctx.lineTo(-r * 0.23, r * 0.15);
-    ctx.stroke();
-    ctx.restore();
 
     ctx.restore();
   }
@@ -1570,7 +1526,7 @@
       const dx = waypoint.x - player.x;
       const dy = waypoint.y - player.y;
       const distance = Math.hypot(dx, dy);
-      const speed = Math.min(world.width, world.height) * 0.19;
+      const speed = Math.min(world.width, world.height) * 0.228;
       const step = speed * dt;
 
       if (distance <= Math.max(3, step)) {
@@ -1612,7 +1568,7 @@
       !constructionMode &&
       nearDoor &&
       !exitTriggered &&
-      player.y > world.height * 0.875
+      player.y > world.height * 0.895
     ) {
       exitTriggered = true;
       saveRoomState();

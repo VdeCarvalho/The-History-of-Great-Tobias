@@ -22,3 +22,12 @@ UPDATE — PRÓXIMO CÔMODO COM HUD ATIVO
 - Chat, Inventário, Equipamentos, Descobertas e Configurações permanecem utilizáveis.
 - O botão VOLTAR AO QUARTO continua disponível no centro da página.
 - O mundo/câmera do quarto não roda em segundo plano nesta página.
+
+
+UPDATE — colisões e retorno ao quarto
+- colisões substituídas por polígonos ajustados ao pé real dos móveis;
+- tapete e áreas de chão livres permanecem caminháveis;
+- retorno do cômodo em construção reposiciona Tobias acima da porta, evitando loop;
+- fallback de retorno também usa sessionStorage;
+- velocidade de caminhada aumentada em 20% (0.19 -> 0.228);
+- usa quarto_tobias_hd.png e tobias_player_sprite_hd.png da última versão visual.

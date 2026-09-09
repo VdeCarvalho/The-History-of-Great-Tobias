@@ -30,7 +30,7 @@
         <h1>PRÓXIMO CÔMODO</h1>
         <p>Em construção.</p>
         <p class="construction-subcopy">Este ambiente será adicionado em uma próxima atualização.</p>
-        <a class="fantasy-button primary construction-back" href="jogo.html"><span>VOLTAR AO QUARTO</span></a>
+        <a class="fantasy-button primary construction-back" id="backToRoom" href="jogo.html?from=construction"><span>VOLTAR AO QUARTO</span></a>
       </div>
 
       <!-- Identificação do save/conta ativa. -->
@@ -281,5 +281,10 @@
   <script src="save-system.js"></script>
   <script src="name-registry.js"></script>
   <script src="jogo.js"></script>
+  <script>
+    document.getElementById("backToRoom")?.addEventListener("click", () => {
+      try { sessionStorage.setItem("tobias_return_from_construction", "1"); } catch {}
+    });
+  </script>
 </body>
 </html>
