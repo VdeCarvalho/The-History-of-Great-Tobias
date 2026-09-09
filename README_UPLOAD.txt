@@ -1,32 +1,18 @@
-THE HISTORY OF GREAT TOBIAS — ROOM UPDATE
+THE HISTORY OF GREAT TOBIAS — QUARTO HD JOGÁVEL
 
-Arquivos principais para enviar ao GitHub Pages:
-- index.html
-- nome.html
-- jogo.html
-- proximo-comodo.html
-- styles.css
-- script.js
-- nome.js
-- jogo.js
-- save-system.js
-- name-registry.js
-- backend-config.js
-- tobias_intro.mp4
-- tobias_theme.mp3
-- ui_click.mp3
-- tobias_apaixonado.png
-- tobias_chorando.png
-- tobias_gargalhada.png
-- tobias_nervoso.png
-- tobias_sorridente.png
+Esta versão usa a arte HD gerada do quarto como o próprio cenário do jogo.
 
-Nesta versão:
-- a página do jogo agora exibe o quarto do personagem em estilo RPG retrô original inspirado na era GBA;
-- o mapa tem aproximadamente 2 telas de largura por 2 telas de altura;
-- a navegação é point-and-click: clique/toque em qualquer ponto do quarto e o Tobias caminha até lá;
-- ao atravessar a porta inferior, a navegação vai para proximo-comodo.html;
-- chat, inventário, equipamentos, descobertas e configurações continuam integrados.
+Navegação:
+- point-and-click / toque para andar;
+- o Tobias calcula uma rota e contorna os principais móveis;
+- clicar em uma área ocupada leva o personagem ao ponto livre mais próximo;
+- a câmera acompanha o personagem;
+- o quarto mantém aproximadamente duas telas de largura por duas de altura;
+- ao chegar à porta inferior, abre proximo-comodo.html.
 
-- o joystick virtual e o controle por WASD/setas foram removidos nesta versão;
-- há pathfinding simples para o Tobias contornar cama, escrivaninha, estante, baú e paredes.
+Visual:
+- quarto_tobias_hd.png é o cenário renderizado em alta qualidade;
+- móveis e decoração NÃO são mais desenhados por primitivas de Canvas;
+- o personagem continua provisório para teste de navegação, conforme a especificação inicial.
+
+Envie TODOS os arquivos deste ZIP para a raiz do repositório GitHub Pages, substituindo os arquivos de mesmo nome.

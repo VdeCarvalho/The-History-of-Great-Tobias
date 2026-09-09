@@ -951,33 +951,91 @@
   );
 
   // ----------------------------------------------------------
-  // QUARTO DO TOBIAS — WORLD / CAMERA / MOVEMENT
+  // ----------------------------------------------------------
+  // QUARTO DO TOBIAS — CENÁRIO HD + POINT-AND-CLICK
   // ----------------------------------------------------------
   const ctx = roomCanvas.getContext("2d");
   const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  ctx.imageSmoothingEnabled = true;
+  const ROOM_IMAGE_WIDTH = 987;
+  const ROOM_IMAGE_HEIGHT = 1594;
+  const ROOM_IMAGE_RATIO = ROOM_IMAGE_WIDTH / ROOM_IMAGE_HEIGHT;
+
+  const roomBackground = new Image();
+  roomBackground.decoding = "async";
+  roomBackground.src = "quarto_tobias_hd.png";
+  let roomBackgroundReady = false;
+  roomBackground.addEventListener("load", () => {
+    roomBackgroundReady = true;
+  });
 
   let exitTriggered = false;
   let lastTimestamp = 0;
   let nearDoor = false;
-  let navigationPath = [];
-  let navigationTarget = null;
   let targetPulse = 0;
+  let navigationTarget = null;
+  let navigationPath = [];
 
   let view = { width: 1170, height: 1890 };
   let world = { width: 2340, height: 3780 };
   let camera = { x: 0, y: 0 };
-  let roomObjects = [];
   let doorZone = { x: 0, y: 0, width: 0, height: 0 };
-  let savedFractions = null;
 
   const player = {
     x: 0,
     y: 0,
-    radius: 34,
-    speed: 260,
+    radius: 62,
     facing: "down"
   };
+
+  /*
+    Rectangles are stored as fractions of the HD artwork.
+    They match furniture / walls that should not be walkable.
+    The large central blue carpet remains walkable.
+  */
+  const COLLISION_RECTS = [
+    // top wall / decorations
+    [0.00, 0.00, 1.00, 0.205],
+
+    // desk + chair area, upper-left
+    [0.075, 0.185, 0.360, 0.365],
+
+    // bed + night stand, upper-right
+    [0.555, 0.170, 0.375, 0.300],
+
+    // chest at foot of bed
+    [0.600, 0.370, 0.285, 0.135],
+
+    // left window cushion / book cushion
+    [0.055, 0.430, 0.245, 0.135],
+
+    // cabinet on left side
+    [0.000, 0.485, 0.245, 0.285],
+
+    // round rug / plush rabbit at right
+    [0.750, 0.455, 0.250, 0.145],
+
+    // lower-right cabinet / table
+    [0.735, 0.615, 0.265, 0.180],
+
+    // lower-left shelves / carrot corner
+    [0.000, 0.665, 0.260, 0.205],
+
+    // stone doorway surround — left and right columns
+    [0.245, 0.735, 0.185, 0.205],
+    [0.575, 0.735, 0.190, 0.205],
+
+    // extreme left/right wall edges below the top area
+    [0.000, 0.205, 0.055, 0.795],
+    [0.945, 0.205, 0.055, 0.795],
+
+    // bottom outside the central doorway
+    [0.000, 0.915, 0.405, 0.085],
+    [0.600, 0.915, 0.400, 0.085]
+  ];
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
 
   function saveRoomState() {
     try {
@@ -985,8 +1043,8 @@
         GAME_STATE_KEY,
         JSON.stringify({
           room: {
-            x: world.width ? player.x / world.width : .5,
-            y: world.height ? player.y / world.height : .6
+            x: world.width ? player.x / world.width : 0.5,
+            y: world.height ? player.y / world.height : 0.40
           }
         })
       );
@@ -996,30 +1054,26 @@
   function loadRoomState() {
     try {
       const parsed = JSON.parse(localStorage.getItem(GAME_STATE_KEY) || "{}");
-      const roomState = parsed?.room;
+      const state = parsed?.room;
       if (
-        roomState &&
-        Number.isFinite(Number(roomState.x)) &&
-        Number.isFinite(Number(roomState.y))
+        state &&
+        Number.isFinite(Number(state.x)) &&
+        Number.isFinite(Number(state.y))
       ) {
         return {
-          x: Math.max(0, Math.min(1, Number(roomState.x))),
-          y: Math.max(0, Math.min(1, Number(roomState.y)))
+          x: clamp(Number(state.x), 0, 1),
+          y: clamp(Number(state.y), 0, 1)
         };
       }
     } catch {}
     return null;
   }
 
-  function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-  }
-
   function buildRoomLayout() {
     const rect = gameplayStage.getBoundingClientRect();
     const previous = {
-      fx: world.width ? player.x / world.width : .5,
-      fy: world.height ? player.y / world.height : .62
+      x: world.width ? player.x / world.width : 0.50,
+      y: world.height ? player.y / world.height : 0.40
     };
 
     view.width = Math.max(320, rect.width || 1170);
@@ -1030,104 +1084,46 @@
     roomCanvas.style.width = `${view.width}px`;
     roomCanvas.style.height = `${view.height}px`;
 
-    world.width = view.width * 2;
-    world.height = view.height * 2;
+    // Preserve the original artwork ratio and guarantee at least 2x2 screens.
+    const scale = Math.max(
+      (view.width * 2) / ROOM_IMAGE_WIDTH,
+      (view.height * 2) / ROOM_IMAGE_HEIGHT
+    );
 
-    const wall = Math.round(Math.min(world.width, world.height) * 0.05);
-    const leftWall = wall;
-    const topWall = wall;
-    const rightWall = wall * 0.9;
-    const bottomWall = wall * 1.05;
+    world.width = ROOM_IMAGE_WIDTH * scale;
+    world.height = ROOM_IMAGE_HEIGHT * scale;
 
-    const familyFrame = {
-      x: world.width * 0.55,
-      y: topWall + 55,
-      width: world.width * 0.22,
-      height: world.height * 0.11,
-      type: "familyFrame"
-    };
+    player.radius = Math.max(44, view.width * 0.075);
 
-    const burgerPoster = {
-      x: world.width * 0.22,
-      y: topWall + 70,
-      width: world.width * 0.23,
-      height: world.height * 0.12,
-      type: "burgerPoster"
-    };
-
-    const bed = {
-      x: world.width * 0.66,
-      y: world.height * 0.20,
-      width: world.width * 0.23,
-      height: world.height * 0.18,
-      collide: true,
-      type: "bed"
-    };
-
-    const desk = {
-      x: world.width * 0.68,
-      y: world.height * 0.58,
-      width: world.width * 0.18,
-      height: world.height * 0.12,
-      collide: true,
-      type: "desk"
-    };
-
-    const chest = {
-      x: world.width * 0.17,
-      y: world.height * 0.72,
-      width: world.width * 0.14,
-      height: world.height * 0.09,
-      collide: true,
-      type: "chest"
-    };
-
-    const shelf = {
-      x: world.width * 0.10,
-      y: world.height * 0.27,
-      width: world.width * 0.14,
-      height: world.height * 0.17,
-      collide: true,
-      type: "shelf"
-    };
-
-    const rug = {
-      x: world.width * 0.33,
-      y: world.height * 0.45,
-      width: world.width * 0.34,
-      height: world.height * 0.22,
-      type: "rug"
-    };
-
-    const smallTable = {
-      x: world.width * 0.44,
-      y: world.height * 0.25,
-      width: world.width * 0.12,
-      height: world.height * 0.08,
-      collide: true,
-      type: "table"
-    };
-
+    // Door in the bottom center of the artwork.
     doorZone = {
-      x: world.width * 0.43,
-      y: world.height - bottomWall - 20,
-      width: world.width * 0.14,
-      height: bottomWall + 35
+      x: world.width * 0.405,
+      y: world.height * 0.845,
+      width: world.width * 0.195,
+      height: world.height * 0.125
     };
-
-    roomObjects = [burgerPoster, familyFrame, bed, desk, chest, shelf, rug, smallTable];
 
     const loaded = loadRoomState();
-    const spawn = loaded || savedFractions || previous;
+    const spawn = loaded || previous || { x: 0.50, y: 0.40 };
 
-    player.x = clamp(spawn.x * world.width, leftWall + 90, world.width - rightWall - 90);
-    player.y = clamp(spawn.y * world.height, topWall + 120, world.height - bottomWall - 110);
+    player.x = clamp(spawn.x * world.width, world.width * 0.08, world.width * 0.92);
+    player.y = clamp(spawn.y * world.height, world.height * 0.23, world.height * 0.91);
 
-    if (!player.x || !player.y) {
-      player.x = world.width * .5;
-      player.y = world.height * .74;
+    // First load: start on the clean floor where Tobias appears in the illustration.
+    if (!loaded && (!previous.x || !previous.y)) {
+      player.x = world.width * 0.465;
+      player.y = world.height * 0.390;
     }
 
+    // Never spawn inside furniture after a layout change.
+    if (collides(player.x, player.y)) {
+      const safe = nearestWalkablePoint(world.width * 0.47, world.height * 0.395);
+      player.x = safe.x;
+      player.y = safe.y;
+    }
+
+    navigationPath = [];
+    navigationTarget = null;
     updateCamera(true);
   }
 
@@ -1142,37 +1138,20 @@
 
   function playerBounds(nextX = player.x, nextY = player.y) {
     return {
-      x: nextX - player.radius * 0.72,
-      y: nextY - player.radius * 0.54,
-      width: player.radius * 1.44,
-      height: player.radius * 1.1
+      x: nextX - player.radius * 0.43,
+      y: nextY - player.radius * 0.18,
+      width: player.radius * 0.86,
+      height: player.radius * 0.54
     };
   }
 
   function solidObstacles() {
-    const wall = Math.min(world.width, world.height) * 0.05;
-    const rightWall = wall * 0.9;
-    const bottomWall = wall * 1.05;
-
-    const solids = [
-      { x: 0, y: 0, width: world.width, height: wall },
-      { x: 0, y: 0, width: wall, height: world.height },
-      { x: world.width - rightWall, y: 0, width: rightWall, height: world.height },
-      { x: 0, y: world.height - bottomWall, width: doorZone.x, height: bottomWall },
-      { x: doorZone.x + doorZone.width, y: world.height - bottomWall, width: world.width - (doorZone.x + doorZone.width), height: bottomWall }
-    ];
-
-    for (const object of roomObjects) {
-      if (!object.collide) continue;
-      solids.push({
-        x: object.x,
-        y: object.y,
-        width: object.width,
-        height: object.height
-      });
-    }
-
-    return solids;
+    return COLLISION_RECTS.map(([x, y, width, height]) => ({
+      x: x * world.width,
+      y: y * world.height,
+      width: width * world.width,
+      height: height * world.height
+    }));
   }
 
   function collides(nextX, nextY) {
@@ -1188,18 +1167,16 @@
       return { x: safeX, y: safeY };
     }
 
-    const step = Math.max(18, player.radius * .65);
-    const maxRadius = Math.max(view.width, view.height) * .45;
+    const step = Math.max(20, player.radius * 0.50);
+    const maxRadius = Math.max(view.width, view.height) * 0.55;
 
     for (let radius = step; radius <= maxRadius; radius += step) {
-      const samples = Math.max(12, Math.ceil((Math.PI * 2 * radius) / step));
+      const samples = Math.max(16, Math.ceil((Math.PI * 2 * radius) / step));
       for (let i = 0; i < samples; i++) {
         const angle = (i / samples) * Math.PI * 2;
         const x = clamp(safeX + Math.cos(angle) * radius, 0, world.width);
         const y = clamp(safeY + Math.sin(angle) * radius, 0, world.height);
-        if (!collides(x, y)) {
-          return { x, y };
-        }
+        if (!collides(x, y)) return { x, y };
       }
     }
 
@@ -1208,13 +1185,13 @@
 
   function segmentClear(a, b) {
     const distance = Math.hypot(b.x - a.x, b.y - a.y);
-    const steps = Math.max(1, Math.ceil(distance / Math.max(12, player.radius * .45)));
+    const steps = Math.max(1, Math.ceil(distance / Math.max(14, player.radius * 0.32)));
 
     for (let i = 1; i <= steps; i++) {
       const t = i / steps;
-      const x = a.x + (b.x - a.x) * t;
-      const y = a.y + (b.y - a.y) * t;
-      if (collides(x, y)) return false;
+      if (collides(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)) {
+        return false;
+      }
     }
 
     return true;
@@ -1227,7 +1204,7 @@
       return [target];
     }
 
-    const cell = Math.max(24, Math.min(42, Math.min(view.width, view.height) * .055));
+    const cell = Math.max(28, Math.min(58, Math.min(view.width, view.height) * 0.06));
     const cols = Math.ceil(world.width / cell);
     const rows = Math.ceil(world.height / cell);
 
@@ -1237,36 +1214,35 @@
     });
 
     const toPoint = node => ({
-      x: clamp((node.c + .5) * cell, 0, world.width),
-      y: clamp((node.r + .5) * cell, 0, world.height)
+      x: clamp((node.c + 0.5) * cell, 0, world.width),
+      y: clamp((node.r + 0.5) * cell, 0, world.height)
     });
 
     const startCell = toCell(start);
     let targetCell = toCell(target);
-
     const key = (c, r) => `${c},${r}`;
+
     const isWalkableCell = (c, r) => {
       if (c < 0 || r < 0 || c >= cols || r >= rows) return false;
-      const p = toPoint({ c, r });
-      return !collides(p.x, p.y);
+      const point = toPoint({ c, r });
+      return !collides(point.x, point.y);
     };
 
     if (!isWalkableCell(targetCell.c, targetCell.r)) {
-      const adjusted = nearestWalkablePoint(target.x, target.y);
-      targetCell = toCell(adjusted);
+      targetCell = toCell(nearestWalkablePoint(target.x, target.y));
     }
 
     const open = [{ ...startCell, g: 0, f: 0 }];
     const cameFrom = new Map();
     const gScore = new Map([[key(startCell.c, startCell.r), 0]]);
     const closed = new Set();
-
     const heuristic = (c, r) => Math.hypot(targetCell.c - c, targetCell.r - r);
     open[0].f = heuristic(startCell.c, startCell.r);
 
     const directions = [
-      [1,0,1],[-1,0,1],[0,1,1],[0,-1,1],
-      [1,1,Math.SQRT2],[1,-1,Math.SQRT2],[-1,1,Math.SQRT2],[-1,-1,Math.SQRT2]
+      [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],
+      [1, 1, Math.SQRT2], [1, -1, Math.SQRT2],
+      [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]
     ];
 
     let foundKey = null;
@@ -1293,9 +1269,11 @@
         const nr = current.r + dr;
         if (!isWalkableCell(nc, nr)) continue;
 
-        // Prevent diagonal corner-cutting through furniture/walls.
         if (dc !== 0 && dr !== 0) {
-          if (!isWalkableCell(current.c + dc, current.r) || !isWalkableCell(current.c, current.r + dr)) {
+          if (
+            !isWalkableCell(current.c + dc, current.r) ||
+            !isWalkableCell(current.c, current.r + dr)
+          ) {
             continue;
           }
         }
@@ -1308,7 +1286,12 @@
 
         cameFrom.set(nk, currentKey);
         gScore.set(nk, tentative);
-        open.push({ c: nc, r: nr, g: tentative, f: tentative + heuristic(nc, nr) });
+        open.push({
+          c: nc,
+          r: nr,
+          g: tentative,
+          f: tentative + heuristic(nc, nr)
+        });
       }
     }
 
@@ -1329,7 +1312,7 @@
     const rawPath = cells.slice(1).map(toPoint);
     rawPath.push(target);
 
-    // Line-of-sight smoothing avoids a visibly "grid-like" walk.
+    // Smooth the path so the rabbit walks naturally instead of following grid corners.
     const smoothed = [];
     let anchor = { x: start.x, y: start.y };
     let i = 0;
@@ -1352,10 +1335,8 @@
 
   function setNavigationTarget(worldX, worldY) {
     const desired = nearestWalkablePoint(worldX, worldY);
-    const path = findPath({ x: player.x, y: player.y }, desired);
-
     navigationTarget = desired;
-    navigationPath = path;
+    navigationPath = findPath({ x: player.x, y: player.y }, desired);
     targetPulse = 1;
 
     if (pointClickHint) {
@@ -1364,8 +1345,8 @@
   }
 
   function updateCamera(force = false) {
-    const targetX = clamp(player.x - view.width / 2, 0, world.width - view.width);
-    const targetY = clamp(player.y - view.height / 2, 0, world.height - view.height);
+    const targetX = clamp(player.x - view.width / 2, 0, Math.max(0, world.width - view.width));
+    const targetY = clamp(player.y - view.height / 2, 0, Math.max(0, world.height - view.height));
 
     if (force) {
       camera.x = targetX;
@@ -1373,434 +1354,212 @@
       return;
     }
 
-    camera.x += (targetX - camera.x) * 0.14;
-    camera.y += (targetY - camera.y) * 0.14;
-  }
-
-  function drawRoundedRect(x, y, width, height, radius, fill, stroke) {
-    const r = Math.min(radius, width / 2, height / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + width, y, x + width, y + height, r);
-    ctx.arcTo(x + width, y + height, x, y + height, r);
-    ctx.arcTo(x, y + height, x, y, r);
-    ctx.arcTo(x, y, x + width, y, r);
-    ctx.closePath();
-    if (fill) {
-      ctx.fillStyle = fill;
-      ctx.fill();
-    }
-    if (stroke) {
-      ctx.strokeStyle = stroke;
-      ctx.lineWidth = 3;
-      ctx.stroke();
-    }
-  }
-
-  function drawWallDecor() {
-    const wall = Math.min(world.width, world.height) * 0.05;
-
-    // left wall windows
-    const windowWidth = wall * 0.55;
-    const windowHeight = world.height * 0.12;
-    const windowX = wall * 0.22;
-    const firstY = world.height * 0.22;
-    const secondY = world.height * 0.50;
-
-    [firstY, secondY].forEach((winY, index) => {
-      drawRoundedRect(windowX, winY, windowWidth, windowHeight, 12, "#97d8ff", "#5a4022");
-      drawRoundedRect(windowX + 10, winY + 10, windowWidth - 20, windowHeight - 20, 10, "#d7f3ff", null);
-      ctx.strokeStyle = "rgba(94, 126, 151, .75)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(windowX + windowWidth / 2, winY + 12);
-      ctx.lineTo(windowX + windowWidth / 2, winY + windowHeight - 12);
-      ctx.moveTo(windowX + 12, winY + windowHeight / 2);
-      ctx.lineTo(windowX + windowWidth - 12, winY + windowHeight / 2);
-      ctx.stroke();
-
-      // little curtains
-      ctx.fillStyle = index === 0 ? "#f5c7b0" : "#a9d1f0";
-      ctx.beginPath();
-      ctx.moveTo(windowX + 8, winY + 8);
-      ctx.lineTo(windowX + 8, winY + windowHeight - 8);
-      ctx.lineTo(windowX + 26, winY + windowHeight * 0.65);
-      ctx.lineTo(windowX + 26, winY + windowHeight * 0.35);
-      ctx.closePath();
-      ctx.fill();
-    });
-  }
-
-  function drawBurgerPoster(object) {
-    drawRoundedRect(object.x, object.y, object.width, object.height, 18, "#f4e7c9", "#6c4e28");
-    ctx.fillStyle = "#3e2d19";
-    ctx.font = `700 ${Math.max(16, object.width * 0.08)}px Georgia`;
-    ctx.textAlign = "center";
-    ctx.fillText("I love carrot", object.x + object.width / 2, object.y + object.height * 0.24);
-    ctx.fillText("cheeseburger", object.x + object.width / 2, object.y + object.height * 0.40);
-
-    const cx = object.x + object.width / 2;
-    const cy = object.y + object.height * 0.72;
-    drawRoundedRect(cx - object.width * 0.20, cy - object.height * 0.05, object.width * 0.40, object.height * 0.08, 18, "#d6912b", "#8b5716");
-    ctx.fillStyle = "#6ab15e";
-    ctx.fillRect(cx - object.width * 0.19, cy - object.height * 0.01, object.width * 0.38, object.height * 0.03);
-    ctx.fillStyle = "#f4a84b";
-    ctx.fillRect(cx - object.width * 0.17, cy + object.height * 0.02, object.width * 0.34, object.height * 0.05);
-    drawRoundedRect(cx - object.width * 0.18, cy + object.height * 0.05, object.width * 0.36, object.height * 0.07, 18, "#d69a3c", "#8b5716");
-  }
-
-  function drawFamilyFrame(object) {
-    drawRoundedRect(object.x, object.y, object.width, object.height, 18, "#f4e7c9", "#6c4e28");
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(object.x + 12, object.y + 12, object.width - 24, object.height - 24);
-    ctx.clip();
-    ctx.fillStyle = "#b9d9ee";
-    ctx.fillRect(object.x + 12, object.y + 12, object.width - 24, object.height - 24);
-
-    const centers = [
-      [object.x + object.width * .28, object.y + object.height * .58, 22],
-      [object.x + object.width * .50, object.y + object.height * .52, 28],
-      [object.x + object.width * .72, object.y + object.height * .58, 22]
-    ];
-
-    centers.forEach(([x, y, size], index) => {
-      ctx.fillStyle = index === 1 ? "#fff7ef" : "#f2efe8";
-      ctx.beginPath();
-      ctx.ellipse(x, y, size * .6, size * .75, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#c9cdd4";
-      ctx.beginPath();
-      ctx.arc(x, y - size * .35, size * .55, Math.PI, Math.PI * 2);
-      ctx.lineTo(x + size * .55, y - size * .35);
-      ctx.strokeStyle = "#76808b";
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.fillStyle = "#111";
-      ctx.beginPath();
-      ctx.arc(x - size * .2, y - size * .05, 2.3, 0, Math.PI * 2);
-      ctx.arc(x + size * .2, y - size * .05, 2.3, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.restore();
-  }
-
-  function drawBed(object) {
-    drawRoundedRect(object.x, object.y, object.width, object.height, 24, "#7c4b28", "#4e2c15");
-    drawRoundedRect(object.x + 18, object.y + 18, object.width - 36, object.height - 36, 22, "#f5f4ea", null);
-    drawRoundedRect(object.x + 18, object.y + object.height * .42, object.width - 36, object.height * .40, 22, "#4f7fbe", "#36598c");
-    ctx.fillStyle = "rgba(255,255,255,.28)";
-    ctx.fillRect(object.x + 26, object.y + object.height * .45, object.width - 52, 10);
-    // pillow
-    drawRoundedRect(object.x + object.width * .12, object.y + object.height * .13, object.width * .26, object.height * .14, 14, "#fffdf6", "#c9c4b0");
-  }
-
-  function drawDesk(object) {
-    drawRoundedRect(object.x, object.y, object.width, object.height, 16, "#835429", "#5b3514");
-    ctx.fillStyle = "#6c4421";
-    ctx.fillRect(object.x + object.width * .10, object.y + object.height, object.width * .10, object.height * .33);
-    ctx.fillRect(object.x + object.width * .80, object.y + object.height, object.width * .10, object.height * .33);
-    drawRoundedRect(object.x + object.width * .12, object.y + object.height * .18, object.width * .32, object.height * .20, 10, "#f0e2bb", "#a68c56");
-    drawRoundedRect(object.x + object.width * .58, object.y + object.height * .18, object.width * .12, object.height * .24, 10, "#f0a955", "#8f5824");
-    ctx.fillStyle = "#3aa18f";
-    ctx.fillRect(object.x + object.width * .60, object.y + object.height * .08, object.width * .08, object.height * .12);
-  }
-
-  function drawShelf(object) {
-    drawRoundedRect(object.x, object.y, object.width, object.height, 12, "#7a4d24", "#593313");
-    ctx.strokeStyle = "#5f3817";
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(object.x + 10, object.y + object.height * .33);
-    ctx.lineTo(object.x + object.width - 10, object.y + object.height * .33);
-    ctx.moveTo(object.x + 10, object.y + object.height * .66);
-    ctx.lineTo(object.x + object.width - 10, object.y + object.height * .66);
-    ctx.stroke();
-    const colors = ["#db7f4d", "#5cc28f", "#6ca2f3", "#e6c04d", "#e76db2"];
-    for (let i = 0; i < 12; i++) {
-      ctx.fillStyle = colors[i % colors.length];
-      const bx = object.x + 14 + (i % 3) * (object.width * .26);
-      const by = object.y + 12 + Math.floor(i / 3) * (object.height * .18);
-      ctx.fillRect(bx, by, object.width * .12, object.height * .12);
-    }
-  }
-
-  function drawRug(object) {
-    drawRoundedRect(object.x, object.y, object.width, object.height, 28, "#8dc9e6", "#4d7094");
-    drawRoundedRect(object.x + 18, object.y + 18, object.width - 36, object.height - 36, 24, "#b8ebf5", "#7eabc2");
-
-    const cx = object.x + object.width / 2;
-    const cy = object.y + object.height / 2 + 8;
-    ctx.fillStyle = "#fffaf3";
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, object.width * .12, object.height * .17, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#3b66a7";
-    ctx.beginPath();
-    ctx.moveTo(cx - object.width * .08, cy + object.height * .04);
-    ctx.lineTo(cx, cy - object.height * .13);
-    ctx.lineTo(cx + object.width * .08, cy + object.height * .04);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = "#fffaf3";
-    ctx.beginPath();
-    ctx.ellipse(cx - object.width * .04, cy - object.height * .18, object.width * .035, object.height * .08, -.3, 0, Math.PI * 2);
-    ctx.ellipse(cx + object.width * .04, cy - object.height * .18, object.width * .035, object.height * .08, .3, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#eecf4c";
-    ctx.fillRect(cx + object.width * .08, cy - object.height * .03, object.width * .04, object.height * .18);
-    ctx.fillStyle = "#ce3f2a";
-    ctx.beginPath();
-    ctx.arc(cx - object.width * .14, cy, object.width * .04, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function drawChest(object) {
-    drawRoundedRect(object.x, object.y, object.width, object.height, 18, "#996330", "#5e3815");
-    ctx.fillStyle = "#f4cd57";
-    ctx.fillRect(object.x + object.width * .08, object.y + object.height * .16, object.width * .84, object.height * .12);
-    ctx.fillRect(object.x + object.width * .46, object.y + object.height * .18, object.width * .08, object.height * .42);
-    drawRoundedRect(object.x + object.width * .43, object.y + object.height * .38, object.width * .14, object.height * .18, 8, "#ffeb9f", "#8b5d14");
-  }
-
-  function drawTable(object) {
-    drawRoundedRect(object.x, object.y, object.width, object.height, 14, "#946133", "#603814");
-    ctx.fillStyle = "#fff6dd";
-    ctx.fillRect(object.x + object.width * .18, object.y + object.height * .18, object.width * .24, object.height * .26);
-    ctx.fillStyle = "#f58220";
-    ctx.beginPath();
-    ctx.arc(object.x + object.width * .70, object.y + object.height * .46, object.height * .13, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#6a4518";
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(object.x + object.width * .20, object.y + object.height);
-    ctx.lineTo(object.x + object.width * .20, object.y + object.height * 1.35);
-    ctx.moveTo(object.x + object.width * .80, object.y + object.height);
-    ctx.lineTo(object.x + object.width * .80, object.y + object.height * 1.35);
-    ctx.stroke();
-  }
-
-  function drawDoor() {
-    const wall = Math.min(world.width, world.height) * 0.05;
-    const bottomY = world.height - wall * 1.05;
-    drawRoundedRect(doorZone.x, bottomY - 12, doorZone.width, wall + 12, 18, "#764626", "#502d12");
-    drawRoundedRect(doorZone.x + 14, bottomY + 10, doorZone.width - 28, wall * .72, 14, "#9e6840", "#5d3517");
-    ctx.fillStyle = "#eacb6e";
-    ctx.beginPath();
-    ctx.arc(doorZone.x + doorZone.width * .78, bottomY + wall * .48, 8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "rgba(255,244,185,.35)";
-    ctx.fillRect(doorZone.x + 30, bottomY + 24, doorZone.width - 60, 10);
-    ctx.fillStyle = "rgba(0,0,0,.12)";
-    ctx.fillRect(doorZone.x, bottomY + wall * .85, doorZone.width, 14);
+    // Smooth follow camera.
+    camera.x += (targetX - camera.x) * 0.12;
+    camera.y += (targetY - camera.y) * 0.12;
   }
 
   function drawPlayer() {
     const x = player.x;
     const y = player.y;
-    const scale = player.radius;
+    const r = player.radius;
+    const bob = navigationPath.length ? Math.sin(performance.now() / 85) * r * 0.035 : 0;
 
-    ctx.fillStyle = "rgba(0,0,0,.20)";
+    ctx.save();
+    ctx.translate(x, y + bob);
+
+    // Soft contact shadow.
+    const shadow = ctx.createRadialGradient(0, r * 0.54, r * 0.08, 0, r * 0.54, r * 0.62);
+    shadow.addColorStop(0, "rgba(0,0,0,.34)");
+    shadow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = shadow;
     ctx.beginPath();
-    ctx.ellipse(x, y + scale * .86, scale * .72, scale * .28, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, r * 0.54, r * 0.62, r * 0.22, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // cape
-    ctx.fillStyle = "#3f6eb3";
+    // Blue cape behind the body.
+    ctx.fillStyle = "#365f9f";
+    ctx.strokeStyle = "#243c66";
+    ctx.lineWidth = Math.max(2, r * 0.045);
     ctx.beginPath();
-    ctx.moveTo(x - scale * .45, y + scale * .10);
-    ctx.quadraticCurveTo(x - scale * .85, y + scale * .55, x - scale * .36, y + scale * .92);
-    ctx.lineTo(x + scale * .15, y + scale * .58);
-    ctx.lineTo(x + scale * .02, y + scale * .14);
+    ctx.moveTo(-r * 0.25, -r * 0.05);
+    ctx.quadraticCurveTo(-r * 0.82, r * 0.20, -r * 0.54, r * 0.88);
+    ctx.quadraticCurveTo(-r * 0.05, r * 0.72, r * 0.24, r * 0.22);
     ctx.closePath();
     ctx.fill();
+    ctx.stroke();
 
-    // body
-    ctx.fillStyle = "#f7f4ef";
+    // Body / tunic.
+    const bodyGrad = ctx.createLinearGradient(0, -r * 0.05, 0, r * 0.72);
+    bodyGrad.addColorStop(0, "#fdf9f0");
+    bodyGrad.addColorStop(1, "#d9d5ce");
+    ctx.fillStyle = bodyGrad;
+    ctx.strokeStyle = "#747b84";
     ctx.beginPath();
-    ctx.ellipse(x, y + scale * .26, scale * .46, scale * .54, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, r * 0.26, r * 0.42, r * 0.52, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Small blue tunic / belt.
+    ctx.fillStyle = "#284f83";
+    ctx.fillRect(-r * 0.34, r * 0.19, r * 0.68, r * 0.28);
+    ctx.fillStyle = "#c8922e";
+    ctx.fillRect(-r * 0.35, r * 0.37, r * 0.70, r * 0.08);
+
+    // Feet.
+    ctx.fillStyle = "#a8adb5";
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.18, r * 0.72, r * 0.20, r * 0.12, 0, 0, Math.PI * 2);
+    ctx.ellipse(r * 0.18, r * 0.72, r * 0.20, r * 0.12, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // arms/shield/sword hint by direction
-    if (player.facing === "left") {
-      ctx.fillStyle = "#d1d5dc";
-      drawRoundedRect(x - scale * .90, y + scale * .08, scale * .24, scale * .34, 8, "#c0c6cf", "#7e8794");
-      ctx.strokeStyle = "#c7cbd2";
-      ctx.lineWidth = 5;
+    // Ears, behind helmet.
+    ctx.fillStyle = "#fff9f1";
+    ctx.strokeStyle = "#d9c8bf";
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.22, -r * 0.74, r * 0.13, r * 0.39, -0.28, 0, Math.PI * 2);
+    ctx.ellipse(r * 0.22, -r * 0.74, r * 0.13, r * 0.39, 0.28, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#f2c3c2";
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.22, -r * 0.74, r * 0.055, r * 0.25, -0.28, 0, Math.PI * 2);
+    ctx.ellipse(r * 0.22, -r * 0.74, r * 0.055, r * 0.25, 0.28, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head.
+    ctx.fillStyle = "#fffaf3";
+    ctx.strokeStyle = "#cfc6bd";
+    ctx.lineWidth = Math.max(2, r * 0.035);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.27, r * 0.43, r * 0.40, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Helmet.
+    const helmetGrad = ctx.createLinearGradient(0, -r * 0.68, 0, -r * 0.18);
+    helmetGrad.addColorStop(0, "#edf0f4");
+    helmetGrad.addColorStop(0.45, "#b6bdc8");
+    helmetGrad.addColorStop(1, "#777f8b");
+    ctx.fillStyle = helmetGrad;
+    ctx.strokeStyle = "#515864";
+    ctx.beginPath();
+    ctx.arc(0, -r * 0.34, r * 0.44, Math.PI, Math.PI * 2);
+    ctx.lineTo(r * 0.43, -r * 0.22);
+    ctx.lineTo(-r * 0.43, -r * 0.22);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Helmet ribs.
+    ctx.strokeStyle = "rgba(70,77,88,.82)";
+    ctx.lineWidth = Math.max(2, r * 0.035);
+    for (const offset of [-0.24, -0.08, 0.08, 0.24]) {
       ctx.beginPath();
-      ctx.moveTo(x + scale * .15, y - scale * .18);
-      ctx.lineTo(x + scale * .70, y - scale * .48);
-      ctx.stroke();
-    } else if (player.facing === "right") {
-      drawRoundedRect(x + scale * .66, y + scale * .08, scale * .24, scale * .34, 8, "#c0c6cf", "#7e8794");
-      ctx.strokeStyle = "#c7cbd2";
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(x - scale * .15, y - scale * .18);
-      ctx.lineTo(x - scale * .70, y - scale * .48);
-      ctx.stroke();
-    } else {
-      drawRoundedRect(x + scale * .48, y + scale * .18, scale * .22, scale * .30, 8, "#c0c6cf", "#7e8794");
-      ctx.strokeStyle = "#c7cbd2";
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(x - scale * .30, y + scale * .05);
-      ctx.lineTo(x - scale * .80, y + scale * .28);
+      ctx.moveTo(r * offset, -r * 0.63);
+      ctx.lineTo(r * offset * 1.2, -r * 0.31);
       ctx.stroke();
     }
 
-    // head
-    ctx.fillStyle = "#fffaf3";
+    // Face.
+    const faceShift = player.facing === "left" ? -r * 0.045 : player.facing === "right" ? r * 0.045 : 0;
+    ctx.fillStyle = "#25282c";
     ctx.beginPath();
-    ctx.ellipse(x, y - scale * .20, scale * .42, scale * .42, 0, 0, Math.PI * 2);
+    ctx.arc(-r * 0.13 + faceShift, -r * 0.24, r * 0.033, 0, Math.PI * 2);
+    ctx.arc(r * 0.13 + faceShift, -r * 0.24, r * 0.033, 0, Math.PI * 2);
     ctx.fill();
-
-    // ears
-    ctx.fillStyle = "#fffaf3";
+    ctx.fillStyle = "#f0a8a8";
     ctx.beginPath();
-    ctx.ellipse(x - scale * .18, y - scale * .68, scale * .11, scale * .30, -.18, 0, Math.PI * 2);
-    ctx.ellipse(x + scale * .18, y - scale * .68, scale * .11, scale * .30, .18, 0, Math.PI * 2);
+    ctx.arc(0 + faceShift * 0.35, -r * 0.12, r * 0.045, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#f6d6d6";
+    ctx.strokeStyle = "#a96f72";
+    ctx.lineWidth = Math.max(1.5, r * 0.025);
     ctx.beginPath();
-    ctx.ellipse(x - scale * .18, y - scale * .68, scale * .05, scale * .19, -.18, 0, Math.PI * 2);
-    ctx.ellipse(x + scale * .18, y - scale * .68, scale * .05, scale * .19, .18, 0, Math.PI * 2);
-    ctx.fill();
-
-    // helmet
-    ctx.fillStyle = "#d0d4dc";
-    ctx.beginPath();
-    ctx.arc(x, y - scale * .26, scale * .44, Math.PI, Math.PI * 2);
-    ctx.lineTo(x + scale * .44, y - scale * .22);
-    ctx.strokeStyle = "#808995";
-    ctx.lineWidth = 4;
-    ctx.stroke();
-    ctx.fill();
-
-    // face
-    ctx.fillStyle = "#1b1b1b";
-    const eyeShift = player.facing === "left" ? -3 : player.facing === "right" ? 3 : 0;
-    ctx.beginPath();
-    ctx.arc(x - scale * .12 + eyeShift, y - scale * .18, 2.4, 0, Math.PI * 2);
-    ctx.arc(x + scale * .12 + eyeShift, y - scale * .18, 2.4, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = "#b88989";
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(x - scale * .10, y - scale * .02);
-    ctx.quadraticCurveTo(x, y + scale * .05, x + scale * .10, y - scale * .02);
+    ctx.arc(0, -r * 0.07, r * 0.12, 0.15, Math.PI - 0.15);
     ctx.stroke();
 
-    ctx.fillStyle = "#f6b6b6";
+    // Shield on the right.
+    ctx.fillStyle = "#2f5a96";
+    ctx.strokeStyle = "#c9932c";
+    ctx.lineWidth = Math.max(3, r * 0.055);
     ctx.beginPath();
-    ctx.arc(x, y - scale * .08, 3.2, 0, Math.PI * 2);
+    ctx.moveTo(r * 0.39, r * 0.03);
+    ctx.lineTo(r * 0.72, r * 0.10);
+    ctx.lineTo(r * 0.68, r * 0.52);
+    ctx.quadraticCurveTo(r * 0.54, r * 0.68, r * 0.40, r * 0.52);
+    ctx.closePath();
     ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#e2b348";
+    ctx.beginPath();
+    ctx.ellipse(r * 0.54, r * 0.31, r * 0.08, r * 0.11, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sword on the left.
+    ctx.save();
+    ctx.rotate(-0.64);
+    ctx.fillStyle = "#e4e7ec";
+    ctx.strokeStyle = "#767d88";
+    ctx.lineWidth = Math.max(1.5, r * 0.025);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.82, r * 0.04);
+    ctx.lineTo(-r * 0.24, -r * 0.01);
+    ctx.lineTo(-r * 0.24, r * 0.09);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = "#c18d2c";
+    ctx.lineWidth = Math.max(3, r * 0.05);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.23, -r * 0.03);
+    ctx.lineTo(-r * 0.23, r * 0.15);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.restore();
   }
 
   function renderRoom() {
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(0, 0, view.width, view.height);
 
-    // background
-    ctx.fillStyle = "#b68654";
+    ctx.fillStyle = "#1a1511";
     ctx.fillRect(0, 0, view.width, view.height);
 
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
-    const wall = Math.min(world.width, world.height) * 0.05;
-    const leftWall = wall;
-    const rightWall = wall * 0.9;
-    const bottomWall = wall * 1.05;
-
-    // floor
-    ctx.fillStyle = "#bf8d57";
-    ctx.fillRect(0, 0, world.width, world.height);
-    for (let y = wall; y < world.height - bottomWall; y += 44) {
-      ctx.fillStyle = y % 88 === 0 ? "rgba(255,255,255,.08)" : "rgba(0,0,0,.05)";
-      ctx.fillRect(leftWall, y, world.width - leftWall - rightWall, 6);
+    if (roomBackgroundReady) {
+      // This is the generated HD room artwork, not procedural furniture.
+      ctx.drawImage(roomBackground, 0, 0, world.width, world.height);
+    } else {
+      const fallback = ctx.createLinearGradient(0, 0, 0, world.height);
+      fallback.addColorStop(0, "#4a3526");
+      fallback.addColorStop(1, "#201610");
+      ctx.fillStyle = fallback;
+      ctx.fillRect(0, 0, world.width, world.height);
     }
 
-    // walls
-    ctx.fillStyle = "#e7d6bd";
-    ctx.fillRect(0, 0, world.width, wall);
-    ctx.fillRect(0, 0, leftWall, world.height);
-    ctx.fillRect(world.width - rightWall, 0, rightWall, world.height);
-    ctx.fillRect(0, world.height - bottomWall, doorZone.x, bottomWall);
-    ctx.fillRect(doorZone.x + doorZone.width, world.height - bottomWall, world.width - (doorZone.x + doorZone.width), bottomWall);
-
-    ctx.fillStyle = "rgba(255,255,255,.24)";
-    ctx.fillRect(0, wall - 8, world.width, 8);
-    ctx.fillRect(leftWall - 8, 0, 8, world.height);
-
-    drawWallDecor();
-
-    for (const object of roomObjects) {
-      switch (object.type) {
-        case "burgerPoster":
-          drawBurgerPoster(object);
-          break;
-        case "familyFrame":
-          drawFamilyFrame(object);
-          break;
-        case "bed":
-          drawBed(object);
-          break;
-        case "desk":
-          drawDesk(object);
-          break;
-        case "shelf":
-          drawShelf(object);
-          break;
-        case "rug":
-          drawRug(object);
-          break;
-        case "chest":
-          drawChest(object);
-          break;
-        case "table":
-          drawTable(object);
-          break;
-      }
-    }
-
-    // simple little plant
-    drawRoundedRect(world.width * .83, world.height * .79, world.width * .05, world.height * .05, 10, "#b27544", "#6b3b15");
-    ctx.fillStyle = "#5cb96c";
-    ctx.beginPath();
-    ctx.ellipse(world.width * .855, world.height * .77, world.width * .03, world.height * .03, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    drawDoor();
-
+    // Destination marker.
     if (navigationTarget && (navigationPath.length || targetPulse > 0)) {
-      const pulse = 1 + Math.sin(performance.now() / 110) * .10;
-      const radius = 17 * pulse;
+      const pulse = 1 + Math.sin(performance.now() / 115) * 0.10;
+      const radius = player.radius * 0.24 * pulse;
       ctx.save();
-      ctx.globalAlpha = .42 + .28 * Math.max(0, targetPulse);
-      ctx.strokeStyle = "#f5d45c";
-      ctx.lineWidth = 4;
+      ctx.globalAlpha = 0.30 + 0.28 * Math.max(0, targetPulse);
+      ctx.strokeStyle = "#ffe071";
+      ctx.lineWidth = Math.max(3, player.radius * 0.045);
       ctx.beginPath();
       ctx.arc(navigationTarget.x, navigationTarget.y, radius, 0, Math.PI * 2);
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(navigationTarget.x, navigationTarget.y, radius * .35, 0, Math.PI * 2);
-      ctx.fillStyle = "#fff2a8";
+      ctx.arc(navigationTarget.x, navigationTarget.y, radius * 0.25, 0, Math.PI * 2);
+      ctx.fillStyle = "#fff1a6";
       ctx.fill();
       ctx.restore();
     }
 
     drawPlayer();
-
-    // door rug/path
-    ctx.fillStyle = "rgba(76, 112, 154, .55)";
-    drawRoundedRect(doorZone.x + doorZone.width * .14, doorZone.y - world.height * .09, doorZone.width * .72, world.height * .11, 18, "rgba(94, 142, 196, .65)", "rgba(61, 94, 136, .85)");
-
     ctx.restore();
   }
 
@@ -1810,7 +1569,7 @@
       const dx = waypoint.x - player.x;
       const dy = waypoint.y - player.y;
       const distance = Math.hypot(dx, dy);
-      const speed = Math.min(world.width, world.height) * 0.34;
+      const speed = Math.min(world.width, world.height) * 0.19;
       const step = speed * dt;
 
       if (distance <= Math.max(3, step)) {
@@ -1833,28 +1592,26 @@
         if (!collides(nextX, nextY)) {
           player.x = nextX;
           player.y = nextY;
+        } else if (navigationTarget) {
+          navigationPath = findPath({ x: player.x, y: player.y }, navigationTarget);
         } else {
-          // Dynamic safety: recalculate from the current location.
-          if (navigationTarget) {
-            navigationPath = findPath(
-              { x: player.x, y: player.y },
-              navigationTarget
-            );
-          } else {
-            navigationPath = [];
-          }
+          navigationPath = [];
         }
       }
     }
 
-    if (targetPulse > 0) {
-      targetPulse = Math.max(0, targetPulse - dt * .8);
-    }
+    targetPulse = Math.max(0, targetPulse - dt * 0.85);
 
     nearDoor = rectsOverlap(playerBounds(), doorZone);
-    roomExitHint.classList.toggle("visible", nearDoor);
+    if (roomExitHint) {
+      roomExitHint.classList.toggle("visible", nearDoor);
+    }
 
-    if (nearDoor && !exitTriggered && player.y > world.height - doorZone.height - 60) {
+    if (
+      nearDoor &&
+      !exitTriggered &&
+      player.y > world.height * 0.875
+    ) {
       exitTriggered = true;
       saveRoomState();
       window.location.href = "proximo-comodo.html";
@@ -1864,7 +1621,6 @@
   roomCanvas.addEventListener("pointerdown", event => {
     if (anyBlockingOverlayOpen()) return;
 
-    // A click/tap anywhere in the room becomes a destination.
     const rect = roomCanvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
 
@@ -1891,7 +1647,6 @@
     requestAnimationFrame(gameLoop);
   }
 
-  // ----------------------------------------------------------
   // Lifecycle
   // ----------------------------------------------------------
   window.addEventListener("pagehide", () => {

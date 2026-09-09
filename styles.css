@@ -1974,3 +1974,10 @@ body.game-page.chat-keyboard-open
   opacity: 0;
   transform: translateX(-50%) translateY(8px);
 }
+
+
+/* HQ PLAYABLE ROOM */
+.room-scene-layer{background:#1a1511!important}
+.room-canvas{cursor:pointer;touch-action:none;background:#1a1511}
+.gameplay-stage{background:#1a1511!important}
+.point-click-hint{pointer-events:none}
