@@ -1,0 +1,41 @@
+THE HISTORY OF GREAT TOBIAS - NOVA ARTE HD-2D
+
+Este documento substitui as orientacoes do README_UPLOAD anterior.
+1. Extraia o ZIP no computador.
+2. No GitHub, use Add file > Upload files.
+3. Envie TODOS os arquivos extraidos para a raiz, onde fica index.html.
+4. Substitua os arquivos de mesmo nome e clique Commit changes.
+5. Aguarde o GitHub Pages atualizar; use Ctrl+F5 se aparecer arte antiga.
+Nao envie o ZIP fechado nem uma pasta envolvendo os arquivos.
+Nao e necessario apagar o repositorio ou reconfigurar o Supabase.
+
+Quarto redesenhado, duas janelas a esquerda, cama, escrivaninha, retratos,
+tapete de super-heroi coelho, piso de madeira e passagem inferior.
+Personagem ativo: tobias_sheet_normalized.png, 4 direcoes x 4 quadros.
+Mascara de caminhada e camadas de oclusao refeitas para a nova arte.
+Posicoes salvas da arte anterior sao migradas para uma posicao livre.
+Intro, emojis do chat, menus, audio e configuracao Supabase preservados.
+Arquivos antigos sem uso nao interferem no funcionamento.
+
+Testes locais: Edge/Playwright, 390x844 e 1440x1000, renderizacao,
+clique/movimento e retorno do proximo comodo. Sem erros de JavaScript.
+Publicacao remota e chat Supabase nao foram testados.
+
+Arte original criada com a ferramenta integrada de geracao de imagens.
+Direcao visual inspirada em HD-2D; continua sendo um jogo web Canvas,
+com iluminacao incorporada na imagem, sem equivalencia com Unreal Engine.
+
+Especificacao dos prompts finais:
+Cenario: portrait 1024x1536, HD-2D game background inspired by Pokemon Gamma
+Emerald, dimensional furniture and pixel textures, orthographic elevated view,
+two left windows with daylight, wood floor, green bed upper right, desk upper
+left, nightstand, bookcase and chest. Blue rug with white rabbit superhero in
+red cape. Poster text 'I love carrot cheeseburger' and carrot burger image.
+Second poster: helmeted little rabbit with family. Open bottom-center exit.
+Spacious contiguous floor, no player painted into scene, no UI.
+Personagem: transparent 4x4 sheet, white rabbit knight, four walk poses in each
+direction down/left/right/up. Long ears through silver helmet, silver armor,
+blue tunic, red cape, boots and sheathed sword. Detailed HD-2D pixel art,
+consistent upper-left light, no floor, shadow, grid or labels.
+Integracao: recorte e normalizacao mecanica dos sprites; mascaras tecnicas
+tracadas sobre a nova arte. Folha original incluida para futuras iteracoes.

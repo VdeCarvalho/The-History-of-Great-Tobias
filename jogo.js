@@ -967,8 +967,8 @@
   // ----------------------------------------------------------
   const ctx = roomCanvas.getContext("2d");
   const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  const ROOM_IMAGE_WIDTH = 987;
-  const ROOM_IMAGE_HEIGHT = 1594;
+  const ROOM_IMAGE_WIDTH = 1024;
+  const ROOM_IMAGE_HEIGHT = 1536;
   const ROOM_IMAGE_RATIO = ROOM_IMAGE_WIDTH / ROOM_IMAGE_HEIGHT;
 
   const roomBackground = new Image();
@@ -981,7 +981,7 @@
 
   const playerSprite = new Image();
   playerSprite.decoding = "async";
-  playerSprite.src = "tobias_player_sprite_hd.png";
+  playerSprite.src = "tobias_sheet_normalized.png";
   let playerSpriteReady = false;
   playerSprite.addEventListener("load", () => {
     playerSpriteReady = true;
@@ -1016,21 +1016,19 @@
     maskCtx.drawImage(walkMaskImage, 0, 0);
     walkMaskPixels = maskCtx.getImageData(0, 0, walkMaskWidth, walkMaskHeight).data;
     walkMaskReady = true;
+    if (!constructionMode) buildRoomLayout();
   });
 
   // Original room cutouts redrawn over Tobias only when his feet are behind them.
   // This creates correct depth without changing the approved room artwork.
   const OCCLUDER_DEFS = [
-    ["occ_desk.png",118,292,292,266,550],
-    ["occ_nightstand.png",500,305,120,180,468],
-    ["occ_bed.png",585,270,350,405,660],
-    ["occ_chest.png",632,590,268,200,775],
-    ["occ_left_cushion.png",95,675,190,170,832],
-    ["occ_left_cabinet.png",0,735,275,430,1145],
-    ["occ_right_objects.png",735,715,252,250,945],
-    ["occ_right_cabinet.png",735,945,252,330,1250],
-    ["occ_lower_left.png",0,1080,310,345,1405],
-    ["occ_doorway.png",215,1115,550,370,1450]
+    ["occ_desk.png",0,0,1024,1536,460],
+    ["occ_nightstand.png",0,0,1024,1536,410],
+    ["occ_bed.png",0,0,1024,1536,665],
+    ["occ_chest.png",0,0,1024,1536,1085],
+    ["occ_left_cabinet.png",0,0,1024,1536,1150],
+    ["occ_left_cushion.png",0,0,1024,1536,695],
+    ["occ_doorway.png",0,0,1024,1536,1536]
   ];
 
   const roomOccluders = OCCLUDER_DEFS.map(([src,x,y,w,h,baseline]) => {
@@ -1081,6 +1079,7 @@
         GAME_STATE_KEY,
         JSON.stringify({
           room: {
+            artVersion: 2,
             x: world.width ? player.x / world.width : 0.5,
             y: world.height ? player.y / world.height : 0.40
           }
@@ -1094,7 +1093,7 @@
       const parsed = JSON.parse(localStorage.getItem(GAME_STATE_KEY) || "{}");
       const state = parsed?.room;
       if (
-        state &&
+        state && state.artVersion === 2 &&
         Number.isFinite(Number(state.x)) &&
         Number.isFinite(Number(state.y))
       ) {
@@ -1134,18 +1133,18 @@
     world.width = sourceWidth * scale;
     world.height = sourceHeight * scale;
 
-    player.radius = Math.max(28, view.width * 0.045);
+    player.radius = world.width * 0.018;
 
     // Door in the bottom center of the artwork.
     doorZone = {
-      x: world.width * 0.405,
-      y: world.height * 0.765,
-      width: world.width * 0.190,
-      height: world.height * 0.115
+      x: world.width * 0.430,
+      y: world.height * 0.900,
+      width: world.width * 0.150,
+      height: world.height * 0.100
     };
 
     const loaded = returningFromConstruction ? null : loadRoomState();
-    const spawn = loaded || previous || { x: 0.50, y: 0.40 };
+    const spawn = loaded || (previous.x && previous.y ? previous : { x: 0.50, y: 0.48 });
 
     player.x = clamp(spawn.x * world.width, world.width * 0.06, world.width * 0.94);
     player.y = clamp(spawn.y * world.height, world.height * 0.06, world.height * 0.92);
@@ -1153,14 +1152,14 @@
     // First load: start on the clean floor where Tobias appears in the illustration.
     if (returningFromConstruction) {
       player.x = world.width * 0.500;
-      player.y = world.height * 0.700;
+      player.y = world.height * 0.830;
       try {
         const cleanUrl = `${window.location.pathname}`;
         window.history.replaceState({}, "", cleanUrl);
       } catch {}
     } else if (!loaded && (!previous.x || !previous.y)) {
       player.x = world.width * 0.470;
-      player.y = world.height * 0.380;
+      player.y = world.height * 0.480;
     }
 
     // Never spawn inside furniture after a layout change.
@@ -1433,12 +1432,7 @@
     const bob = walking ? Math.abs(Math.sin(phase)) * r * 0.045 : Math.sin(performance.now() / 650) * r * 0.006;
     const lean = walking ? Math.sin(phase) * 0.012 : 0;
 
-    let activeImage = playerSprite;
-    if (walking) {
-      const frameIndex = Math.floor((phase / (Math.PI * 2)) * 6) % 6;
-      const frame = walkFrames[(frameIndex + 6) % 6];
-      if (frame?.ready) activeImage = frame.image;
-    }
+    const activeImage = playerSprite;
 
     ctx.save();
     ctx.translate(x, y - bob);
@@ -1446,15 +1440,17 @@
 
     const ready = activeImage === playerSprite ? playerSpriteReady : true;
     if (ready && activeImage.naturalWidth) {
-      const naturalW = activeImage.naturalWidth || 512;
-      const naturalH = activeImage.naturalHeight || 768;
-      const spriteHeight = r * 3.10;
+      const naturalW = activeImage.naturalWidth / 4;
+      const naturalH = activeImage.naturalHeight / 4;
+      const spriteHeight = r * 5;
       const spriteWidth = spriteHeight * (naturalW / naturalH);
-      const flip = player.facing === "left" ? -1 : 1;
+      const column = walking ? Math.floor(phase / (Math.PI * 2) * 4) % 4 : 1;
+      const row = { down: 0, left: 1, right: 2, up: 3 }[player.facing];
 
       ctx.save();
-      ctx.scale(flip, 1);
-      ctx.drawImage(activeImage, -spriteWidth / 2, -spriteHeight * 0.80, spriteWidth, spriteHeight);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(activeImage, column * naturalW, row * naturalH, naturalW, naturalH,
+        -spriteWidth / 2, -spriteHeight * 0.94 + r * 0.23, spriteWidth, spriteHeight);
       ctx.restore();
     } else {
       ctx.fillStyle = "#fff";
@@ -1600,7 +1596,7 @@
       !constructionMode &&
       nearDoor &&
       !exitTriggered &&
-      player.y > world.height * 0.825
+      player.y > world.height * 0.925
     ) {
       exitTriggered = true;
       saveRoomState();
