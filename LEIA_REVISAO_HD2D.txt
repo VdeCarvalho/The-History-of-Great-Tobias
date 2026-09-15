@@ -1,0 +1,60 @@
+TOBIAS - REVISAO DA NOVA ARTE HD2D
+
+ATUALIZACAO TOBIAS DO FILME E TAPETE
+Personagem jogavel sem equipamento, baseado no conceito aprovado do filme:
+orelhas longas caidas, rosto e olhos ambar, 16 poses alinhadas.
+Novo bordado do tapete com coelho de armadura, escudo, espada e capa azul.
+O restante do quarto, luz, movimento, escala e colisoes foram preservados.
+Arquivos novos obrigatorios: tobias_film.png e tapete_cavaleiro.png.
+
+REVISAO EXPRESSAO E MOVIMENTO
+Novo Tobias: olhar vivo, sobrancelhas expressivas, focinho marcado e sorriso
+confiante. Continua sem equipamento. Frente e costas alinhadas ao eixo do corpo.
+Salto baixo de 0,46 s: preparo, impulso, voo curto e pouso. Deslocamento apenas
+na fase aerea; patinhas apoiadas nao deslizam. Som sincronizado com o pouso.
+Ao soltar o controle, o deslocamento para e o salto termina de assentar no chao.
+Moveis em primeiro plano ficam parcialmente transparentes na regiao do heroi.
+Feixes mais visiveis, brilho varrendo as janelas e sombras organicas animadas.
+O fundo ilustrado original, a escala do quarto e o controle foram preservados.
+Teste adicional: zero deslocamento nas amostras de preparo/pouso; recortes
+de primeiro plano verificados com opacidade de 22%, nunca 100%.
+
+Base: The_History_of_Great_Tobias_NOVA_ARTE_HD2D.zip fornecido pelo usuario.
+O quarto_tobias_hd.png original foi preservado, sem nova arte de cenario e
+sem Unreal. O mundo ilustrado agora tem 2/3 da largura e do comprimento
+anteriores. A altura visual dos moveis e paredes acompanha essa escala.
+O tamanho de desenho do Tobias foi mantido independente dessa reducao.
+
+CONTROLES
+Segure e arraste o mouse ou dedo para seguir continuamente. Ao soltar, para.
+Um clique/toque rapido ainda define um destino. Menus, perda de foco e
+cancelamento do toque interrompem o controle pressionado.
+
+ARTE E AMBIENTE
+Novo sprite original gerado: coelho sem armadura, roupa, capa ou armas;
+em pe quando parado, em quatro patas e com pulinhos durante o movimento.
+16 poses, quatro direcoes, alinhadas pela base das patinhas.
+A ilustracao do quarto permanece intacta. Camadas locais animam a luz,
+sombras de folhas e poeira; pequenos recortes do jardim nas janelas oscilam.
+O quarto continua sendo HD2D com fundo ilustrado, nao um modelo 3D.
+Retratos, tapete, video de abertura e emojis originais foram preservados.
+Novos inventarios comecam vazios; inventarios salvos nao sao apagados.
+
+COLISOES
+Margem maior nas patinhas, verificacao de todo o segmento de movimento,
+validacao das arestas de navegacao e profundidade pelos recortes originais.
+
+UPLOAD
+Extraia este ZIP e envie todo o seu conteudo para a raiz do repositorio,
+substituindo os arquivos existentes. Nao envie apenas jogo.js: tambem sao
+necessarios atmosphere.js e tobias_hero.png.
+Nao publique a pasta envolvendo os arquivos nem o ZIP fechado.
+O jogo roda com hospedagem estatica, como GitHub Pages, sem backend de jogo.
+Configuracao local: saves e nomes neste navegador; chat sem servidor global.
+Recarregue a pagina depois da publicacao para obter os arquivos novos.
+
+TESTES
+Edge/Playwright: desktop e celular emulado, clique/toque pressionado e arraste,
+parada ao soltar, colisoes em volta dos moveis e alteracao visual entre quadros.
+O teste emulado nao substitui uma verificacao em telefone fisico.
+Esta revisao nao foi enviada ao GitHub. Versoes anteriores foram preservadas.

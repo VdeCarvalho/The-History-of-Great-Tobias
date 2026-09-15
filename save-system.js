@@ -167,36 +167,7 @@ window.TobiasSave = (() => {
       return;
     }
 
-    const testItems = [
-      {
-        itemId: "metal_sword",
-        name: "Espada de Metal",
-        type: "Equipamento",
-        equippable: true,
-        icon: "⚔️",
-        quantity: 1,
-        description:
-          "Uma espada metálica simples e confiável. Item temporário de teste do sistema de equipamentos.",
-        craftable: true,
-        crafting:
-          "2 Barras de Metal + 1 Madeira"
-      },
-      {
-        itemId: "refining_stone",
-        name: "Pedra de Refino",
-        type: "Material de refino",
-        equippable: false,
-        icon: "💎",
-        quantity: 1,
-        description:
-          "Uma pedra utilizada no processo de refino. Item temporário de teste do inventário.",
-        craftable: false,
-        crafting:
-          "Item não fabricável"
-      }
-    ];
-
-    saveInventory(testItems);
+    saveInventory([]);
   }
 
   return {

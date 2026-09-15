@@ -981,7 +981,9 @@
 
   const playerSprite = new Image();
   playerSprite.decoding = "async";
-  playerSprite.src = "tobias_sheet_normalized.png";
+  playerSprite.src = "tobias_biped.png";
+  const knightRug = new Image();
+  knightRug.src = "tapete_cavaleiro.png";
   let playerSpriteReady = false;
   playerSprite.addEventListener("load", () => {
     playerSpriteReady = true;
@@ -1046,8 +1048,7 @@
   let targetPulse = 0;
   let navigationTarget = null;
   let navigationPath = [];
-  let walkAnimationPhase = 0;
-  let footstepDistance = 0;
+  const hop = {active:false,phase:0,height:0,column:0,facing:'down',landings:0};
   let footstepVariant = 0;
 
   let view = { width: 1170, height: 1890 };
@@ -1124,16 +1125,16 @@
     const sourceWidth = roomBackground.naturalWidth || ROOM_IMAGE_WIDTH;
     const sourceHeight = roomBackground.naturalHeight || ROOM_IMAGE_HEIGHT;
 
-    // Preserve the original artwork ratio and guarantee at least 2x2 screens.
+    // Shrink the illustrated room to 2/3; keep Tobias at his previous screen size.
     const scale = Math.max(
       (view.width * 2) / sourceWidth,
       (view.height * 2) / sourceHeight
     );
 
-    world.width = sourceWidth * scale;
-    world.height = sourceHeight * scale;
+    world.width = sourceWidth * scale * (2 / 3);
+    world.height = sourceHeight * scale * (2 / 3);
 
-    player.radius = world.width * 0.018;
+    player.radius = sourceWidth * scale * 0.018;
 
     // Door in the bottom center of the artwork.
     doorZone = {
@@ -1209,8 +1210,8 @@
     // in which the player can briefly walk through scenery while assets load.
     if (!walkMaskReady) return true;
 
-    const rx = Math.max(4, player.radius * 0.13);
-    const ry = Math.max(3, player.radius * 0.075);
+    const rx = Math.max(4, player.radius * 0.48);
+    const ry = Math.max(3, player.radius * 0.22);
     const footY = nextY + player.radius * 0.23;
 
     const samples = [
@@ -1248,7 +1249,7 @@
 
   function segmentClear(a, b) {
     const distance = Math.hypot(b.x - a.x, b.y - a.y);
-    const steps = Math.max(1, Math.ceil(distance / Math.max(7, player.radius * 0.16)));
+    const steps = Math.max(1, Math.ceil(distance / Math.max(2, world.width / walkMaskWidth * 2)));
 
     for (let i = 1; i <= steps; i++) {
       const t = i / steps;
@@ -1330,7 +1331,7 @@
       for (const [dc, dr, cost] of directions) {
         const nc = current.c + dc;
         const nr = current.r + dr;
-        if (!isWalkableCell(nc, nr)) continue;
+        if (!isWalkableCell(nc, nr) || !segmentClear(toPoint(current), toPoint({c:nc,r:nr}))) continue;
 
         if (dc !== 0 && dr !== 0) {
           if (
@@ -1426,17 +1427,16 @@
     const x = player.x;
     const y = player.y;
     const r = player.radius;
-    const walking = navigationPath.length > 0;
+    const walking = hop.active;
 
-    const phase = walkAnimationPhase;
-    const bob = walking ? Math.abs(Math.sin(phase)) * r * 0.045 : Math.sin(performance.now() / 650) * r * 0.006;
-    const lean = walking ? Math.sin(phase) * 0.012 : 0;
+    const bob = hop.height * r;
 
     const activeImage = playerSprite;
 
     ctx.save();
+    ctx.fillStyle = 'rgba(45,31,21,.22)';
+    ctx.beginPath();ctx.ellipse(x,y+r*.23,r*.62-bob*.15,r*.19,0,0,Math.PI*2);ctx.fill();
     ctx.translate(x, y - bob);
-    ctx.rotate(lean);
 
     const ready = activeImage === playerSprite ? playerSpriteReady : true;
     if (ready && activeImage.naturalWidth) {
@@ -1444,11 +1444,13 @@
       const naturalH = activeImage.naturalHeight / 4;
       const spriteHeight = r * 5;
       const spriteWidth = spriteHeight * (naturalW / naturalH);
-      const column = walking ? Math.floor(phase / (Math.PI * 2) * 4) % 4 : 1;
-      const row = { down: 0, left: 1, right: 2, up: 3 }[player.facing];
+      const column = walking ? hop.column : 0;
+      const row = { down: 0, right: 1, left: 2, up: 3 }[walking?hop.facing:player.facing];
 
       ctx.save();
-      ctx.imageSmoothingEnabled = false;
+      ctx.imageSmoothingEnabled = true;
+      const breathe = walking ? 1 : 1+Math.sin(performance.now()/470)*.008;
+      ctx.translate(0,r*.23);ctx.scale(1,breathe);ctx.translate(0,-r*.23);
       ctx.drawImage(activeImage, column * naturalW, row * naturalH, naturalW, naturalH,
         -spriteWidth / 2, -spriteHeight * 0.94 + r * 0.23, spriteWidth, spriteHeight);
       ctx.restore();
@@ -1470,6 +1472,10 @@
 
     for (const occ of roomOccluders) {
       if (!occ.ready || playerSourceY >= occ.baseline) continue;
+      ctx.save();
+      // Local foreground cutaway keeps the hero readable behind tall furniture.
+      ctx.globalAlpha = .22;
+      ctx.beginPath();ctx.rect(player.x-player.radius*3,player.y-player.radius*6,player.radius*6,player.radius*6.5);ctx.clip();
       ctx.drawImage(
         occ.image,
         (occ.x / sourceW) * world.width,
@@ -1477,6 +1483,7 @@
         (occ.w / sourceW) * world.width,
         (occ.h / sourceH) * world.height
       );
+      ctx.restore();
     }
   }
 
@@ -1493,6 +1500,10 @@
     if (roomBackgroundReady) {
       // This is the generated HD room artwork, not procedural furniture.
       ctx.drawImage(roomBackground, 0, 0, world.width, world.height);
+      if (knightRug.complete && knightRug.naturalWidth) {
+        ctx.drawImage(knightRug,340/1024*world.width,754/1536*world.height,369/1024*world.width,351/1536*world.height);
+      }
+      window.TobiasAtmosphere.draw(ctx, roomBackground, walkMaskImage, world.width, world.height, performance.now()/1000);
     } else {
       const fallback = ctx.createLinearGradient(0, 0, 0, world.height);
       fallback.addColorStop(0, "#4a3526");
@@ -1534,57 +1545,32 @@
   }
 
   function updatePlayer(dt) {
-    if (navigationPath.length) {
-      const waypoint = navigationPath[0];
-      const dx = waypoint.x - player.x;
-      const dy = waypoint.y - player.y;
-      const distance = Math.hypot(dx, dy);
-      const speed = Math.min(world.width, world.height) * 0.228; // +20% versus the original 0.19
-      const step = speed * dt;
+    advanceHop(dt);
+    updateDoorAndTarget(dt);
+  }
 
-      if (distance <= Math.max(3, step)) {
-        const moved = Math.hypot(waypoint.x - player.x, waypoint.y - player.y);
-        player.x = waypoint.x;
-        player.y = waypoint.y;
-        walkAnimationPhase = (walkAnimationPhase + dt * 10.8) % (Math.PI * 2);
-        footstepDistance += moved;
-        navigationPath.shift();
-      } else if (distance > 0) {
-        const vx = dx / distance;
-        const vy = dy / distance;
-
-        if (Math.abs(vx) > Math.abs(vy)) {
-          player.facing = vx < 0 ? "left" : "right";
-        } else {
-          player.facing = vy < 0 ? "up" : "down";
-        }
-
-        const nextX = player.x + vx * step;
-        const nextY = player.y + vy * step;
-
-        if (!collides(nextX, nextY)) {
-          const moved = Math.hypot(nextX - player.x, nextY - player.y);
-          player.x = nextX;
-          player.y = nextY;
-          walkAnimationPhase = (walkAnimationPhase + dt * 10.8) % (Math.PI * 2);
-          footstepDistance += moved;
-          const stepSpacing = Math.max(34, player.radius * 0.88);
-          if (footstepDistance >= stepSpacing) {
-            footstepDistance %= stepSpacing;
-            playFootstep();
-          }
-        } else if (navigationTarget) {
-          navigationPath = findPath({ x: player.x, y: player.y }, navigationTarget);
-        } else {
-          navigationPath = [];
-        }
-      }
+  function advanceHop(dt) {
+    let budget=player.radius*5.8*dt, moved=0;
+    while(budget>.001&&navigationPath.length){
+      const target=navigationPath[0],dx=target.x-player.x,dy=target.y-player.y,d=Math.hypot(dx,dy);
+      if(d<.01){navigationPath.shift();continue;}
+      const travel=Math.min(d,budget),next={x:player.x+dx/d*travel,y:player.y+dy/d*travel};
+      if(!segmentClear(player,next)){navigationPath=[];break;}
+      player.facing=Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down');
+      hop.facing=player.facing;player.x=next.x;player.y=next.y;budget-=travel;moved+=travel;
+      if(travel>=d-.001)navigationPath.shift();
     }
+    hop.active=moved>.001;hop.height=0;
+    if(hop.active){
+      const old=hop.phase;
+      // Each animation cycle covers two planted steps, independent of frame rate.
+      const next=old+moved/(player.radius*2.4);
+      if(Math.floor(next*2)>Math.floor(old*2)){playFootstep();hop.landings++;}
+      hop.phase=next%1;hop.column=Math.floor(hop.phase*4);
+    }else{hop.phase=0;hop.column=0;}
+  }
 
-    if (!navigationPath.length) {
-      footstepDistance = 0;
-    }
-
+  function updateDoorAndTarget(dt) {
     targetPulse = Math.max(0, targetPulse - dt * 0.85);
 
     nearDoor = rectsOverlap(playerBounds(), doorZone);
@@ -1604,20 +1590,41 @@
     }
   }
 
-  roomCanvas.addEventListener("pointerdown", event => {
-    if (anyBlockingOverlayOpen() || !walkMaskReady) return;
-
+  let heldPointer = null;
+  let lastHeldAim = 0;
+  let lastHeldTarget = null;
+  function aimHeld(force=false) {
+    if (!heldPointer) return;
     const rect = roomCanvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
-
-    const localX = (event.clientX - rect.left) * (view.width / rect.width);
-    const localY = (event.clientY - rect.top) * (view.height / rect.height);
+    const localX = clamp((heldPointer.x - rect.left) * (view.width / rect.width),0,view.width);
+    const localY = clamp((heldPointer.y - rect.top) * (view.height / rect.height),0,view.height);
     const worldX = camera.x + localX;
     const worldY = camera.y + localY;
-
+    if (!force && lastHeldTarget && Math.hypot(worldX-lastHeldTarget.x,worldY-lastHeldTarget.y)<Math.max(3,player.radius*.12)) return;
+    lastHeldTarget={x:worldX,y:worldY};
     setNavigationTarget(worldX, worldY);
+  }
+  function releaseHold(stop=true) {
+    const id=heldPointer?.id;heldPointer=null;lastHeldTarget=null;
+    if(stop){navigationPath=[];navigationTarget=null;}
+    if(id!==undefined&&roomCanvas.hasPointerCapture(id))roomCanvas.releasePointerCapture(id);
+  }
+  roomCanvas.style.touchAction='none';
+  roomCanvas.addEventListener('pointerdown',event=>{
+    if(anyBlockingOverlayOpen()||!walkMaskReady||heldPointer||event.isPrimary===false||(event.pointerType==='mouse'&&event.button!==0))return;
+    heldPointer={id:event.pointerId,x:event.clientX,y:event.clientY,sx:event.clientX,sy:event.clientY,start:performance.now(),dragged:false};
+    roomCanvas.setPointerCapture(event.pointerId);aimHeld(true);
     event.preventDefault();
   });
+  roomCanvas.addEventListener('pointermove',event=>{if(heldPointer?.id!==event.pointerId)return;heldPointer.x=event.clientX;heldPointer.y=event.clientY;heldPointer.dragged ||= Math.hypot(event.clientX-heldPointer.sx,event.clientY-heldPointer.sy)>6;event.preventDefault();});
+  roomCanvas.addEventListener('pointerup',event=>{if(heldPointer?.id!==event.pointerId)return;releaseHold(heldPointer.dragged||performance.now()-heldPointer.start>230);});
+  roomCanvas.addEventListener('pointercancel',()=>releaseHold());
+  roomCanvas.addEventListener('lostpointercapture',()=>{if(heldPointer)releaseHold();});
+  window.addEventListener('blur',()=>releaseHold());
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseHold();});
+  roomCanvas.addEventListener('contextmenu',event=>event.preventDefault());
+  window.TobiasHD={state:()=>({player:{...player},hop:{...hop},world:{...world},view:{...view},camera:{...camera},held:!!heldPointer,path:navigationPath.length,ready:walkMaskReady&&playerSpriteReady&&roomBackgroundReady}),collides,navigate:setNavigationTarget};
 
   function gameLoop(timestamp) {
     if (!lastTimestamp) lastTimestamp = timestamp;
@@ -1625,8 +1632,9 @@
     lastTimestamp = timestamp;
 
     if (!anyBlockingOverlayOpen()) {
+      if(heldPointer&&timestamp-lastHeldAim>90){aimHeld();lastHeldAim=timestamp;}
       updatePlayer(dt);
-    }
+    } else if(heldPointer) releaseHold();
 
     updateCamera(false);
     renderRoom();

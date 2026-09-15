@@ -1,5 +1,8 @@
 THE HISTORY OF GREAT TOBIAS - NOVA ARTE HD-2D
 
+REVISAO ATUAL: consulte LEIA_REVISAO_HD2D.txt. O texto abaixo registra a base
+anterior. A revisao atual funciona em modo local, sem Supabase.
+
 Este documento substitui as orientacoes do README_UPLOAD anterior.
 1. Extraia o ZIP no computador.
 2. No GitHub, use Add file > Upload files.
