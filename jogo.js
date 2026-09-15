@@ -1221,10 +1221,15 @@
   }
 
   function collides(nextX, nextY) {
+    const mom=story?.motherPosition() || (familyMode ? TobiasFamily.mother : null);
+    if (familyMode && Math.hypot((nextX-mom.x*world.width)/(player.radius*1.1),(nextY-mom.y*world.height)/(player.radius*.48))<1) return true;
+    return floorCollides(nextX,nextY);
+  }
+
+  function floorCollides(nextX, nextY) {
     // Before the mask is ready movement is intentionally blocked; no frame exists
     // in which the player can briefly walk through scenery while assets load.
     if (!walkMaskReady) return true;
-    if (familyMode && Math.hypot((nextX-TobiasFamily.mother.x*world.width)/(player.radius*1.1),(nextY-TobiasFamily.mother.y*world.height)/(player.radius*.48))<1) return true;
 
     const rx = Math.max(4, player.radius * 0.48);
     const ry = Math.max(3, player.radius * 0.22);
@@ -1251,25 +1256,25 @@
     if(!safeFloorCache||safeFloorCache.key!==key){
       const points=[],step=world.width/96;
       for(let y=step/2;y<world.height;y+=step)for(let x=step/2;x<world.width;x+=step){
-        if(!collides(x,y))points.push({x,y});
+        if(!floorCollides(x,y))points.push({x,y});
       }
       safeFloorCache={key,points};
     }
     let best={x:player.x,y:player.y},distance=Infinity;
     for(const point of safeFloorCache.points){
       const d=(point.x-safeX)**2+(point.y-safeY)**2;
-      if(d<distance){distance=d;best=point;}
+      if(d<distance&&!collides(point.x,point.y)){distance=d;best=point;}
     }
     return {x:best.x,y:best.y};
   }
 
-  function segmentClear(a, b) {
+  function segmentClear(a, b, blocked=collides) {
     const distance = Math.hypot(b.x - a.x, b.y - a.y);
     const steps = Math.max(1, Math.ceil(distance / Math.max(2, world.width / walkMaskWidth * 2)));
 
     for (let i = 1; i <= steps; i++) {
       const t = i / steps;
-      if (collides(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)) {
+      if (blocked(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)) {
         return false;
       }
     }
@@ -1467,8 +1472,8 @@
 
       ctx.save();
       ctx.imageSmoothingEnabled = true;
-      const breathe = walking ? 1 : 1+Math.sin(performance.now()/470)*.008;
-      ctx.translate(0,r*.23);ctx.scale(1,breathe);ctx.translate(0,-r*.23);
+      const breathe = walking ? 0 : Math.sin(performance.now()/620)*.018;
+      ctx.translate(0,r*.23);ctx.scale(1-breathe*.28,1+breathe);ctx.translate(0,-r*.23);
       ctx.drawImage(activeImage, column * naturalW, row * naturalH, naturalW, naturalH,
         -spriteWidth / 2, -spriteHeight * 0.94 + r * 0.23, spriteWidth, spriteHeight);
       ctx.restore();
@@ -1482,18 +1487,18 @@
     ctx.restore();
   }
 
-  function drawOccludersInFrontOfPlayer() {
+  function drawOccludersInFrontOfPlayer(actor=player) {
     if (!roomBackgroundReady) return;
     const sourceW = roomBackground.naturalWidth || ROOM_IMAGE_WIDTH;
     const sourceH = roomBackground.naturalHeight || ROOM_IMAGE_HEIGHT;
-    const playerSourceY = (player.y / world.height) * sourceH;
+    const playerSourceY = (actor.y / world.height) * sourceH;
 
     for (const occ of roomOccluders) {
       if (!(occ.crop ? roomBackgroundReady : occ.ready) || playerSourceY >= occ.baseline) continue;
       ctx.save();
       // Local foreground cutaway keeps the hero readable behind tall furniture.
       ctx.globalAlpha = .22;
-      ctx.beginPath();ctx.rect(player.x-player.radius*3,player.y-player.radius*6,player.radius*6,player.radius*6.5);ctx.clip();
+      ctx.beginPath();ctx.rect(actor.x-actor.radius*3,actor.y-actor.radius*6,actor.radius*6,actor.radius*6.5);ctx.clip();
       if (occ.crop) ctx.drawImage(roomBackground,occ.x,occ.y,occ.w,occ.h,occ.x/sourceW*world.width,occ.y/sourceH*world.height,occ.w/sourceW*world.width,occ.h/sourceH*world.height);
       else ctx.drawImage(
         occ.image,
@@ -1549,10 +1554,12 @@
       ctx.restore();
     }
 
-    if (story && player.y >= TobiasFamily.mother.y*world.height) story.draw(ctx);
+    const mom=story?.motherPosition();
+    const motherActor=mom?{x:mom.x*world.width,y:mom.y*world.height,radius:player.radius}:null;
+    if (story && player.y >= motherActor.y) {story.draw(ctx);drawOccludersInFrontOfPlayer(motherActor);}
     drawPlayer();
-    if (story && player.y < TobiasFamily.mother.y*world.height) story.draw(ctx);
     drawOccludersInFrontOfPlayer();
+    if (story && player.y < motherActor.y) {story.draw(ctx);drawOccludersInFrontOfPlayer(motherActor);}
     ctx.restore();
   }
 
@@ -1658,9 +1665,11 @@
   roomCanvas.addEventListener('contextmenu',event=>event.preventDefault());
   const story = familyMode && !constructionMode ? TobiasStory.create({stage:gameplayStage,
     state:()=>({player,world,view,camera}),navigate:setNavigationTarget,stop:()=>{releaseHold();hop.active=false;},
-    audio:()=>audio,blocked:anyBlockingOverlayOpen,ready:()=>walkMaskReady&&roomBackgroundReady
+    audio:()=>audio,blocked:anyBlockingOverlayOpen,ready:()=>walkMaskReady&&roomBackgroundReady,
+    canWalk:(a,b)=>segmentClear(a,b,floorCollides),
+    face:target=>{const dx=target.x-player.x,dy=target.y-player.y;player.facing=Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down');}
   }) : null;
-  window.TobiasHD={state:()=>({room:familyMode?'casa':'quarto',player:{...player},hop:{...hop},world:{...world},view:{...view},camera:{...camera},held:!!heldPointer,path:navigationPath.length,ready:walkMaskReady&&playerSpriteReady&&roomBackgroundReady}),collides,navigate:setNavigationTarget};
+  window.TobiasHD={state:()=>({room:familyMode?'casa':'quarto',mother:story?.state(),player:{...player},hop:{...hop},world:{...world},view:{...view},camera:{...camera},held:!!heldPointer,path:navigationPath.length,ready:walkMaskReady&&playerSpriteReady&&roomBackgroundReady}),collides,floorCollides,navigate:setNavigationTarget};
 
   function gameLoop(timestamp) {
     if (!lastTimestamp) lastTimestamp = timestamp;

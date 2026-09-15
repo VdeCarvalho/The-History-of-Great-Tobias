@@ -1,31 +1,24 @@
-TOBIAS - JOGO COMPLETO - CASA E FAMILIA
+TOBIAS - JOGO COMPLETO - SALA E COZINHA VIVAS
 
-Este pacote contem o jogo completo. Extraia e publique o CONTEUDO desta pasta
-na raiz do site. A pagina inicial continua sendo index.html.
-Nenhum arquivo foi enviado automaticamente ao GitHub.
+Pacote completo: abertura, quarto do Tobias, sala/cozinha, imagens, musica,
+sons, menus e progresso. Publique o conteudo desta pasta na raiz do site.
+Pagina inicial: index.html. Nada foi publicado automaticamente no GitHub.
 
-NOVIDADES
-- A saida abaixo do quarto leva a casa: quarto e sala em uma unica peca.
-- A nova area tem exatamente o dobro da area do quarto (2048 x 1536 unidades).
-- Cama, criado-mudo, sofa, mesa de centro, cozinha e mesa de jantar.
-- Colisoes por mascara de pixels, caminhos e profundidade dos personagens.
-- Mae do Tobias com vestido rosado e avental, chamada "filho..." e sinal !.
-- Dialogo com retratos, escrita gradual e timbres sintetizados diferentes.
-- Cliques durante a escrita sao ignorados: nao pulam nem completam a fala.
-- O sinal importante desaparece apos concluir a conversa e isso fica salvo.
-- A panela na cozinha pode ser examinada.
-- Tobias usa tunica verde, shorts e patas descalcas como visual basico.
-- Mantidas a musica cozy e a velocidade 50% maior da revisao anterior.
+NESTA REVISAO
+- Cama e criado-mudo removidos da sala; aparador com loucas no lugar.
+- Centro com tapete floral, mesa de costura, cesta, banco e bancada culinaria.
+- Mascara de colisao atualizada; passagens do quarto, jardim e vila preservadas.
+- Respiracao suave de Tobias e da mae em todas as direcoes, com pes ancorados.
+- Mae passeia em trajetos curtos e variados, com pausas e animacao de caminhada.
+- Mae respeita os moveis e cede passagem a Tobias, sem empurra-lo.
+- Ao clicar nela, para e espera Tobias; ambos se voltam para a conversa.
+- Sons vocais sintetizados mais presentes, um por letra, com timbres diferentes.
+- Volume e silencio seguem as configuracoes de efeitos sonoros.
+- Cliques durante a escrita continuam sem pular ou completar as falas.
 
-SAIDAS
-Topo da casa: quarto do Tobias.
-Direita: jardim. Parte inferior: vila.
-Os cenarios externos ainda estao em construcao; ambas as saidas abrem uma
-tela identificada e permitem retornar a casa pela passagem correspondente.
+Continuam incluidos o dialogo da mae, a panela interativa, os retratos,
+a roupa basica do Tobias, a musica cozy e sua velocidade 50% maior.
+Jardim e vila continuam sendo telas em construcao com retorno funcional.
+Nao e necessario apagar o progresso existente.
 
-TESTES
-Desktop e celular emulado: movimento, colisoes, dialogo, cliques antecipados,
-retratos, sons por letra, silencio, persistencia e passagens.
-Nao houve teste em celular fisico.
-
-As artes intermediarias nao utilizadas nao estao neste pacote.
+Verificacoes em navegador desktop e celular emulado, nao em aparelho fisico.
