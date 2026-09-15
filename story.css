@@ -1,0 +1,19 @@
+.story-world-ui {position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden;letter-spacing:0}
+.story-active .game-side-menu,.story-active .game-left-menu {opacity:0!important;pointer-events:none!important}
+.story-active .game-side-menu button,.story-active .game-left-menu button {visibility:hidden!important;pointer-events:none!important}
+.world-interact {position:absolute;pointer-events:auto;border:0;background:transparent;cursor:pointer;padding:0;border-radius:4px;touch-action:manipulation}
+.world-interact:focus-visible {outline:2px solid #ffdd76;outline-offset:3px}
+.pot-interact:hover {outline:2px solid #ffdd7688}
+.npc-important {position:absolute;left:50%;top:-38px;transform:translateX(-50%);width:30px;height:32px;font:bold 27px Georgia,serif;color:#ffe39a;text-shadow:0 2px 3px #312314;background:#315b48;border:1px solid #ffe39a;border-radius:50%;line-height:30px}
+.npc-call {position:absolute;left:calc(50% + 26px);top:-32px;min-width:74px;height:30px;padding:5px 10px;font:16px Georgia,serif;white-space:nowrap;color:#fff6e0;background:#282629ed;border:1px solid #c7a96b;border-radius:4px}
+.story-dialogue {display:none;position:absolute;inset:0;z-index:40;align-items:end;padding:20px 4% 24px;letter-spacing:0;background:rgba(0,0,0,.08)}
+.story-dialogue.open {display:flex}
+.story-advance {position:relative;width:100%;min-height:168px;display:grid;grid-template-columns:116px minmax(0,1fr) 18px;align-items:center;gap:20px;padding:16px 20px;border:2px solid #c8b184;border-radius:6px;background:#24292af5;color:#fff8ed;box-shadow:0 5px 24px #0006;text-align:left;cursor:pointer;font:20px/1.5 Georgia,serif;letter-spacing:0}
+.story-portrait {display:block;width:116px;height:130px;object-fit:contain;object-position:center bottom}
+.story-copy {display:flex;flex-direction:column;align-self:stretch;min-width:0;gap:10px;padding-top:6px}
+.story-speaker {font-size:18px;color:#edcb86;letter-spacing:0}
+.story-text {overflow-wrap:anywhere;min-height:3em}
+.story-arrow {visibility:hidden;align-self:end;color:#edcb86}
+.complete .story-arrow {visibility:visible}
+.story-announcement {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media(max-width:560px){.story-dialogue{padding:10px 10px 16px}.story-advance{min-height:150px;grid-template-columns:72px minmax(0,1fr) 10px;gap:10px;padding:12px 10px;font-size:16px;line-height:1.4}.story-portrait{width:72px;height:105px}.story-speaker{font-size:16px}.story-copy{gap:7px}}
