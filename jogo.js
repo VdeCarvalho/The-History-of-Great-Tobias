@@ -981,22 +981,12 @@
 
   const playerSprite = new Image();
   playerSprite.decoding = "async";
-  playerSprite.src = "tobias_biped.png";
+  playerSprite.src = "tobias_biped_fixed.png";
   const knightRug = new Image();
   knightRug.src = "tapete_cavaleiro.png";
   let playerSpriteReady = false;
   playerSprite.addEventListener("load", () => {
     playerSpriteReady = true;
-  });
-
-  const walkFrames = Array.from({ length: 6 }, (_, index) => {
-    const image = new Image();
-    image.decoding = "async";
-    image.src = `tobias_walk_${index}.png`;
-    return { image, ready: false };
-  });
-  walkFrames.forEach(frame => {
-    frame.image.addEventListener("load", () => { frame.ready = true; });
   });
 
   // Pixel-level walkability map. White pixels = feet may stand there.
@@ -1048,6 +1038,7 @@
   let targetPulse = 0;
   let navigationTarget = null;
   let navigationPath = [];
+  let safeFloorCache = null;
   const hop = {active:false,phase:0,height:0,column:0,facing:'down',landings:0};
   let footstepVariant = 0;
 
@@ -1231,20 +1222,20 @@
       return { x: safeX, y: safeY };
     }
 
-    const step = Math.max(8, player.radius * 0.18);
-    const maxRadius = Math.max(view.width, view.height) * 0.65;
-
-    for (let radius = step; radius <= maxRadius; radius += step) {
-      const samples = Math.max(16, Math.ceil((Math.PI * 2 * radius) / step));
-      for (let i = 0; i < samples; i++) {
-        const angle = (i / samples) * Math.PI * 2;
-        const x = clamp(safeX + Math.cos(angle) * radius, 0, world.width);
-        const y = clamp(safeY + Math.sin(angle) * radius, 0, world.height);
-        if (!collides(x, y)) return { x, y };
+    const key=world.width+','+world.height+','+player.radius;
+    if(!safeFloorCache||safeFloorCache.key!==key){
+      const points=[],step=world.width/96;
+      for(let y=step/2;y<world.height;y+=step)for(let x=step/2;x<world.width;x+=step){
+        if(!collides(x,y))points.push({x,y});
       }
+      safeFloorCache={key,points};
     }
-
-    return { x: player.x, y: player.y };
+    let best={x:player.x,y:player.y},distance=Infinity;
+    for(const point of safeFloorCache.points){
+      const d=(point.x-safeX)**2+(point.y-safeY)**2;
+      if(d<distance){distance=d;best=point;}
+    }
+    return {x:best.x,y:best.y};
   }
 
   function segmentClear(a, b) {
@@ -1399,6 +1390,7 @@
 
   function setNavigationTarget(worldX, worldY) {
     const desired = nearestWalkablePoint(worldX, worldY);
+    if(navigationPath.length&&navigationTarget&&Math.hypot(desired.x-navigationTarget.x,desired.y-navigationTarget.y)<player.radius*.18)return;
     navigationTarget = desired;
     navigationPath = findPath({ x: player.x, y: player.y }, desired);
     targetPulse = 1;
@@ -1408,7 +1400,7 @@
     }
   }
 
-  function updateCamera(force = false) {
+  function updateCamera(force = false, dt = 1/60) {
     const targetX = clamp(player.x - view.width / 2, 0, Math.max(0, world.width - view.width));
     const targetY = clamp(player.y - view.height / 2, 0, Math.max(0, world.height - view.height));
 
@@ -1419,8 +1411,9 @@
     }
 
     // Smooth follow camera.
-    camera.x += (targetX - camera.x) * 0.16;
-    camera.y += (targetY - camera.y) * 0.16;
+    const follow = 1-Math.exp(-10.46*dt);
+    camera.x += (targetX - camera.x) * follow;
+    camera.y += (targetY - camera.y) * follow;
   }
 
   function drawPlayer() {
@@ -1628,7 +1621,7 @@
 
   function gameLoop(timestamp) {
     if (!lastTimestamp) lastTimestamp = timestamp;
-    const dt = Math.min(0.04, (timestamp - lastTimestamp) / 1000);
+    const dt = Math.min(0.1, (timestamp - lastTimestamp) / 1000);
     lastTimestamp = timestamp;
 
     if (!anyBlockingOverlayOpen()) {
@@ -1636,7 +1629,7 @@
       updatePlayer(dt);
     } else if(heldPointer) releaseHold();
 
-    updateCamera(false);
+    updateCamera(false,dt);
     renderRoom();
     requestAnimationFrame(gameLoop);
   }

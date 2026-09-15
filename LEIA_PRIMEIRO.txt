@@ -1,0 +1,15 @@
+TOBIAS - JOGO COMPLETO - REVISAO DE FLUIDEZ
+
+Este pacote contem o jogo completo, incluindo abertura, sons, telas e imagens usadas.
+As artes intermediarias e sprites antigos nao utilizados ficaram fora do pacote.
+
+Correcoes:
+- Recorte das poses de costas corrigido, preservando o topo arredondado da cabeca.
+- Sombras pre-renderizadas em memoria e iluminacao atualizada a 30 Hz.
+- Movimento e camera continuam atualizados em cada quadro.
+- Camera ajustada ao tempo decorrido e menos recalculos de destino ao arrastar.
+- Mantidos o quarto, os efeitos de luz e a caminhada sobre duas patas.
+
+Extraia os arquivos e publique o conteudo desta pasta na raiz do jogo.
+O arquivo inicial e index.html. Use um servidor web para jogar.
+Nada foi publicado automaticamente no GitHub.
