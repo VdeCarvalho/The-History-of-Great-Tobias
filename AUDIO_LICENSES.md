@@ -1,6 +1,8 @@
 # Tobias — Audio license register
 
 ## Walking footsteps
+Dialogue blips: synthesized at runtime using triangle oscillators and soft envelopes, with distinct mother and Tobias pitches. No Undertale/Hades audio or recordings are used.
+
 Room music `tobias_room_cozy.wav`: original synthesized instrumental arrangement created for this game, without third-party recordings or samples. No attribution required.
 
 - `tobias_footstep_wood_1.ogg`

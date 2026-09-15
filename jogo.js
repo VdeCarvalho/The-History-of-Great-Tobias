@@ -10,7 +10,8 @@
   TobiasSave.initializeTestInventory();
 
   const AUDIO_KEY = "tobias_audio_settings_v1";
-  const GAME_STATE_KEY = "tobias_game_state_v1";
+  const familyMode = new URLSearchParams(location.search).get('room') === 'casa';
+  const GAME_STATE_KEY = familyMode ? 'tobias_progress_family_position' : "tobias_game_state_v1";
   const constructionMode = document.body.classList.contains("construction-page");
   const urlParams = new URLSearchParams(window.location.search);
   const returningFromConstruction =
@@ -634,6 +635,7 @@
 
   function anyBlockingOverlayOpen() {
     return (
+      document.getElementById('storyDialogue')?.classList.contains('open') ||
       anyGamePanelOpen() ||
       dialogOne.classList.contains("open") ||
       dialogTwo.classList.contains("open") ||
@@ -980,13 +982,13 @@
   // ----------------------------------------------------------
   const ctx = roomCanvas.getContext("2d");
   const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  const ROOM_IMAGE_WIDTH = 1024;
+  const ROOM_IMAGE_WIDTH = familyMode ? 2048 : 1024;
   const ROOM_IMAGE_HEIGHT = 1536;
   const ROOM_IMAGE_RATIO = ROOM_IMAGE_WIDTH / ROOM_IMAGE_HEIGHT;
 
   const roomBackground = new Image();
   roomBackground.decoding = "async";
-  roomBackground.src = "quarto_tobias_hd.png";
+  roomBackground.src = familyMode ? TobiasFamily.background : "quarto_tobias_hd.png";
   let roomBackgroundReady = false;
   roomBackground.addEventListener("load", () => {
     roomBackgroundReady = true;
@@ -994,7 +996,7 @@
 
   const playerSprite = new Image();
   playerSprite.decoding = "async";
-  playerSprite.src = "tobias_biped_fixed.png";
+  playerSprite.src = "tobias_everyday.png";
   const knightRug = new Image();
   knightRug.src = "tapete_cavaleiro.png";
   let playerSpriteReady = false;
@@ -1005,7 +1007,7 @@
   // Pixel-level walkability map. White pixels = feet may stand there.
   const walkMaskImage = new Image();
   walkMaskImage.decoding = "async";
-  walkMaskImage.src = "room_walkable_mask.png";
+  walkMaskImage.src = familyMode ? TobiasFamily.mask : "room_walkable_mask.png";
   let walkMaskReady = false;
   let walkMaskWidth = ROOM_IMAGE_WIDTH;
   let walkMaskHeight = ROOM_IMAGE_HEIGHT;
@@ -1036,7 +1038,9 @@
     ["occ_doorway.png",0,0,1024,1536,1536]
   ];
 
-  const roomOccluders = OCCLUDER_DEFS.map(([src,x,y,w,h,baseline]) => {
+  const roomOccluders = familyMode ? TobiasFamily.occluders.map(([x,y,w,h]) => ({
+    image:roomBackground,crop:true,x:x/1448*2048,y:y/1086*1536,w:w/1448*2048,h:h/1086*1536,baseline:(y+h)/1086*1536
+  })) : OCCLUDER_DEFS.map(([src,x,y,w,h,baseline]) => {
     const image = new Image();
     image.decoding = "async";
     image.src = src;
@@ -1052,6 +1056,7 @@
   let navigationTarget = null;
   let navigationPath = [];
   let safeFloorCache = null;
+  let roomInitialized = false;
   const hop = {active:false,phase:0,height:0,column:0,facing:'down',landings:0};
   let footstepVariant = 0;
 
@@ -1126,19 +1131,19 @@
     roomCanvas.style.width = `${view.width}px`;
     roomCanvas.style.height = `${view.height}px`;
 
-    const sourceWidth = roomBackground.naturalWidth || ROOM_IMAGE_WIDTH;
-    const sourceHeight = roomBackground.naturalHeight || ROOM_IMAGE_HEIGHT;
+    const sourceWidth = ROOM_IMAGE_WIDTH;
+    const sourceHeight = ROOM_IMAGE_HEIGHT;
 
     // Shrink the illustrated room to 2/3; keep Tobias at his previous screen size.
     const scale = Math.max(
-      (view.width * 2) / sourceWidth,
-      (view.height * 2) / sourceHeight
+      (view.width * 2) / 1024,
+      (view.height * 2) / 1536
     );
 
     world.width = sourceWidth * scale * (2 / 3);
     world.height = sourceHeight * scale * (2 / 3);
 
-    player.radius = sourceWidth * scale * 0.018;
+    player.radius = 1024 * scale * 0.018;
 
     // Door in the bottom center of the artwork.
     doorZone = {
@@ -1148,14 +1153,19 @@
       height: world.height * 0.100
     };
 
-    const loaded = returningFromConstruction ? null : loadRoomState();
+    const loaded = roomInitialized ? previous : ((returningFromConstruction || urlParams.has('from')) ? null : loadRoomState());
     const spawn = loaded || (previous.x && previous.y ? previous : { x: 0.50, y: 0.48 });
 
     player.x = clamp(spawn.x * world.width, world.width * 0.06, world.width * 0.94);
     player.y = clamp(spawn.y * world.height, world.height * 0.06, world.height * 0.92);
 
     // First load: start on the clean floor where Tobias appears in the illustration.
-    if (returningFromConstruction) {
+    if (!roomInitialized && familyMode) {
+      const entry = urlParams.get('from');
+      const start = entry === 'jardim' ? [.92,.46] : entry === 'vila' ? [.5,.85] : [.5,.245];
+      player.x = (loaded?.x ?? start[0]) * world.width;
+      player.y = (loaded?.y ?? start[1]) * world.height;
+    } else if (!roomInitialized && (returningFromConstruction || urlParams.get('from') === 'casa')) {
       player.x = world.width * 0.500;
       player.y = world.height * 0.830;
       try {
@@ -1176,6 +1186,7 @@
 
     navigationPath = [];
     navigationTarget = null;
+    roomInitialized = true;
     updateCamera(true);
   }
 
@@ -1213,6 +1224,7 @@
     // Before the mask is ready movement is intentionally blocked; no frame exists
     // in which the player can briefly walk through scenery while assets load.
     if (!walkMaskReady) return true;
+    if (familyMode && Math.hypot((nextX-TobiasFamily.mother.x*world.width)/(player.radius*1.1),(nextY-TobiasFamily.mother.y*world.height)/(player.radius*.48))<1) return true;
 
     const rx = Math.max(4, player.radius * 0.48);
     const ry = Math.max(3, player.radius * 0.22);
@@ -1477,12 +1489,13 @@
     const playerSourceY = (player.y / world.height) * sourceH;
 
     for (const occ of roomOccluders) {
-      if (!occ.ready || playerSourceY >= occ.baseline) continue;
+      if (!(occ.crop ? roomBackgroundReady : occ.ready) || playerSourceY >= occ.baseline) continue;
       ctx.save();
       // Local foreground cutaway keeps the hero readable behind tall furniture.
       ctx.globalAlpha = .22;
       ctx.beginPath();ctx.rect(player.x-player.radius*3,player.y-player.radius*6,player.radius*6,player.radius*6.5);ctx.clip();
-      ctx.drawImage(
+      if (occ.crop) ctx.drawImage(roomBackground,occ.x,occ.y,occ.w,occ.h,occ.x/sourceW*world.width,occ.y/sourceH*world.height,occ.w/sourceW*world.width,occ.h/sourceH*world.height);
+      else ctx.drawImage(
         occ.image,
         (occ.x / sourceW) * world.width,
         (occ.y / sourceH) * world.height,
@@ -1506,10 +1519,10 @@
     if (roomBackgroundReady) {
       // This is the generated HD room artwork, not procedural furniture.
       ctx.drawImage(roomBackground, 0, 0, world.width, world.height);
-      if (knightRug.complete && knightRug.naturalWidth) {
+      if (!familyMode && knightRug.complete && knightRug.naturalWidth) {
         ctx.drawImage(knightRug,340/1024*world.width,754/1536*world.height,369/1024*world.width,351/1536*world.height);
       }
-      window.TobiasAtmosphere.draw(ctx, roomBackground, walkMaskImage, world.width, world.height, performance.now()/1000);
+      if (!familyMode) window.TobiasAtmosphere.draw(ctx, roomBackground, walkMaskImage, world.width, world.height, performance.now()/1000);
     } else {
       const fallback = ctx.createLinearGradient(0, 0, 0, world.height);
       fallback.addColorStop(0, "#4a3526");
@@ -1536,7 +1549,9 @@
       ctx.restore();
     }
 
+    if (story && player.y >= TobiasFamily.mother.y*world.height) story.draw(ctx);
     drawPlayer();
+    if (story && player.y < TobiasFamily.mother.y*world.height) story.draw(ctx);
     drawOccludersInFrontOfPlayer();
     ctx.restore();
   }
@@ -1578,6 +1593,16 @@
 
   function updateDoorAndTarget(dt) {
     targetPulse = Math.max(0, targetPulse - dt * 0.85);
+    if (familyMode) {
+      if (exitTriggered) return;
+      const x=player.x/world.width,y=player.y/world.height;
+      let destination=null;
+      if(x>.452&&x<.55&&y<.12) destination='jogo.html?from=casa';
+      else if(x>.969&&y>.365&&y<.517) destination='proximo-comodo.html?area=jardim';
+      else if(x>.45&&x<.555&&y>.954) destination='proximo-comodo.html?area=vila';
+      if(destination){exitTriggered=true;saveRoomState();location.href=destination;}
+      return;
+    }
 
     nearDoor = rectsOverlap(playerBounds(), doorZone);
     if (roomExitHint) {
@@ -1592,7 +1617,7 @@
     ) {
       exitTriggered = true;
       saveRoomState();
-      window.location.href = "proximo-comodo.html";
+      window.location.href = "jogo.html?room=casa&from=quarto";
     }
   }
 
@@ -1609,6 +1634,7 @@
     const worldY = camera.y + localY;
     if (!force && lastHeldTarget && Math.hypot(worldX-lastHeldTarget.x,worldY-lastHeldTarget.y)<Math.max(3,player.radius*.12)) return;
     lastHeldTarget={x:worldX,y:worldY};
+    story?.cancelPending();
     setNavigationTarget(worldX, worldY);
   }
   function releaseHold(stop=true) {
@@ -1630,7 +1656,11 @@
   window.addEventListener('blur',()=>releaseHold());
   document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseHold();});
   roomCanvas.addEventListener('contextmenu',event=>event.preventDefault());
-  window.TobiasHD={state:()=>({player:{...player},hop:{...hop},world:{...world},view:{...view},camera:{...camera},held:!!heldPointer,path:navigationPath.length,ready:walkMaskReady&&playerSpriteReady&&roomBackgroundReady}),collides,navigate:setNavigationTarget};
+  const story = familyMode && !constructionMode ? TobiasStory.create({stage:gameplayStage,
+    state:()=>({player,world,view,camera}),navigate:setNavigationTarget,stop:()=>{releaseHold();hop.active=false;},
+    audio:()=>audio,blocked:anyBlockingOverlayOpen,ready:()=>walkMaskReady&&roomBackgroundReady
+  }) : null;
+  window.TobiasHD={state:()=>({room:familyMode?'casa':'quarto',player:{...player},hop:{...hop},world:{...world},view:{...view},camera:{...camera},held:!!heldPointer,path:navigationPath.length,ready:walkMaskReady&&playerSpriteReady&&roomBackgroundReady}),collides,navigate:setNavigationTarget};
 
   function gameLoop(timestamp) {
     if (!lastTimestamp) lastTimestamp = timestamp;
@@ -1643,6 +1673,7 @@
     } else if(heldPointer) releaseHold();
 
     updateCamera(false,dt);
+    story?.update(dt);
     renderRoom();
     requestAnimationFrame(gameLoop);
   }
