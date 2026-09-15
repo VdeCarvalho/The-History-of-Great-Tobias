@@ -4,6 +4,8 @@ Este pacote contem o jogo completo, incluindo abertura, sons, telas e imagens us
 As artes intermediarias e sprites antigos nao utilizados ficaram fora do pacote.
 
 Correcoes:
+- Musica instrumental cozy no quarto, com volume e silencio nas configuracoes.
+- Velocidade de caminhada aumentada em 50%.
 - Recorte das poses de costas corrigido, preservando o topo arredondado da cabeca.
 - Sombras pre-renderizadas em memoria e iluminacao atualizada a 30 Hz.
 - Movimento e camera continuam atualizados em cada quadro.

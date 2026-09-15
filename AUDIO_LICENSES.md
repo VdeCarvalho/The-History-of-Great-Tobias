@@ -1,6 +1,8 @@
 # Tobias — Audio license register
 
 ## Walking footsteps
+Room music `tobias_room_cozy.wav`: original synthesized instrumental arrangement created for this game, without third-party recordings or samples. No attribution required.
+
 - `tobias_footstep_wood_1.ogg`
 - `tobias_footstep_wood_2.ogg`
 - Origin: generated specifically for The History of Great Tobias from synthesis; no third-party recording or sample incorporated.

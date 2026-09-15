@@ -746,12 +746,24 @@
   }
 
   let audio = readAudioSettings();
+  const roomMusic = document.getElementById("roomMusic");
+  function syncRoomMusic() {
+    if (!roomMusic) return;
+    roomMusic.volume = audio.musicVolume * 0.65;
+    roomMusic.muted = audio.musicMuted;
+    if (document.hidden || audio.musicMuted || audio.musicVolume === 0) roomMusic.pause();
+    else roomMusic.play().catch(() => {});
+  }
+  document.addEventListener("pointerdown", syncRoomMusic);
+  document.addEventListener("keydown", syncRoomMusic);
+  document.addEventListener("visibilitychange", syncRoomMusic);
 
   function saveAudioSettings() {
     localStorage.setItem(AUDIO_KEY, JSON.stringify(audio));
   }
 
   function applyAudioSettings() {
+    syncRoomMusic();
     musicSlider.value = Math.round(audio.musicVolume * 100);
     sfxSlider.value = Math.round(audio.sfxVolume * 100);
     musicValue.textContent = `${musicSlider.value}%`;
@@ -764,6 +776,7 @@
 
   musicSlider.addEventListener("input", () => {
     audio.musicVolume = Number(musicSlider.value) / 100;
+    syncRoomMusic();
     musicValue.textContent = `${musicSlider.value}%`;
     saveAudioSettings();
   });
@@ -1543,7 +1556,7 @@
   }
 
   function advanceHop(dt) {
-    let budget=player.radius*5.8*dt, moved=0;
+    let budget=player.radius*8.7*dt, moved=0;
     while(budget>.001&&navigationPath.length){
       const target=navigationPath[0],dx=target.x-player.x,dy=target.y-player.y,d=Math.hypot(dx,dy);
       if(d<.01){navigationPath.shift();continue;}
