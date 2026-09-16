@@ -281,10 +281,15 @@
   <script src="backend-config.js"></script>
   <script src="save-system.js"></script>
   <script src="name-registry.js"></script>
-  <script src="jogo.js?v=living2"></script>
+  <script src="jogo.js?v=village1"></script>
   <script>
     const area = new URLSearchParams(location.search).get('area');
-    if (area === 'jardim' || area === 'vila') {
+    if (area === 'floresta') {
+      document.querySelector('.construction-panel h1').textContent = 'TRILHA DA FLORESTA';
+      const back = document.getElementById('backToRoom');
+      back.href = 'jogo.html?room=vila&from=floresta';
+      back.querySelector('span').textContent = 'VOLTAR À VILA';
+    } else if (area === 'jardim' || area === 'vila') {
       document.querySelector('.construction-panel h1').textContent = area === 'jardim' ? 'JARDIM' : 'VILA';
       const back = document.getElementById('backToRoom');
       back.href = 'jogo.html?room=casa&from=' + area;

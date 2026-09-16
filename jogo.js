@@ -11,7 +11,8 @@
 
   const AUDIO_KEY = "tobias_audio_settings_v1";
   const familyMode = new URLSearchParams(location.search).get('room') === 'casa';
-  const GAME_STATE_KEY = familyMode ? 'tobias_progress_family_position' : "tobias_game_state_v1";
+  const villageMode = new URLSearchParams(location.search).get('room') === 'vila';
+  const GAME_STATE_KEY = villageMode ? 'tobias_progress_village_position' : familyMode ? 'tobias_progress_family_position' : "tobias_game_state_v1";
   const constructionMode = document.body.classList.contains("construction-page");
   const urlParams = new URLSearchParams(window.location.search);
   const returningFromConstruction =
@@ -982,13 +983,13 @@
   // ----------------------------------------------------------
   const ctx = roomCanvas.getContext("2d");
   const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  const ROOM_IMAGE_WIDTH = familyMode ? 2048 : 1024;
-  const ROOM_IMAGE_HEIGHT = 1536;
+  const ROOM_IMAGE_WIDTH = villageMode ? 4096 : familyMode ? 2048 : 1024;
+  const ROOM_IMAGE_HEIGHT = villageMode ? 3072 : 1536;
   const ROOM_IMAGE_RATIO = ROOM_IMAGE_WIDTH / ROOM_IMAGE_HEIGHT;
 
   const roomBackground = new Image();
   roomBackground.decoding = "async";
-  roomBackground.src = familyMode ? TobiasFamily.background : "quarto_tobias_hd.png";
+  roomBackground.src = villageMode ? TobiasVillage.background : familyMode ? TobiasFamily.background : "quarto_tobias_hd.png";
   let roomBackgroundReady = false;
   roomBackground.addEventListener("load", () => {
     roomBackgroundReady = true;
@@ -1007,7 +1008,7 @@
   // Pixel-level walkability map. White pixels = feet may stand there.
   const walkMaskImage = new Image();
   walkMaskImage.decoding = "async";
-  walkMaskImage.src = familyMode ? TobiasFamily.mask : "room_walkable_mask.png";
+  walkMaskImage.src = villageMode ? TobiasVillage.mask : familyMode ? TobiasFamily.mask : "room_walkable_mask.png";
   let walkMaskReady = false;
   let walkMaskWidth = ROOM_IMAGE_WIDTH;
   let walkMaskHeight = ROOM_IMAGE_HEIGHT;
@@ -1038,8 +1039,8 @@
     ["occ_doorway.png",0,0,1024,1536,1536]
   ];
 
-  const roomOccluders = familyMode ? TobiasFamily.occluders.map(([x,y,w,h]) => ({
-    image:roomBackground,crop:true,x:x/1448*2048,y:y/1086*1536,w:w/1448*2048,h:h/1086*1536,baseline:(y+h)/1086*1536
+  const roomOccluders = (familyMode || villageMode) ? (villageMode ? TobiasVillage.occluders : TobiasFamily.occluders).map(([x,y,w,h]) => ({
+    image:roomBackground,crop:true,x:x/1448*ROOM_IMAGE_WIDTH,y:y/1086*ROOM_IMAGE_HEIGHT,w:w/1448*ROOM_IMAGE_WIDTH,h:h/1086*ROOM_IMAGE_HEIGHT,baseline:(y+h)/1086*ROOM_IMAGE_HEIGHT
   })) : OCCLUDER_DEFS.map(([src,x,y,w,h,baseline]) => {
     const image = new Image();
     image.decoding = "async";
@@ -1160,7 +1161,12 @@
     player.y = clamp(spawn.y * world.height, world.height * 0.06, world.height * 0.92);
 
     // First load: start on the clean floor where Tobias appears in the illustration.
-    if (!roomInitialized && familyMode) {
+    if (!roomInitialized && villageMode) {
+      const entry=urlParams.get('from');
+      const start=TobiasVillage.spawn[entry === 'jardim' ? 'garden' : entry === 'floresta' ? 'forest' : 'street'];
+      player.x=(loaded?.x ?? start.x)*world.width;
+      player.y=(loaded?.y ?? start.y)*world.height;
+    } else if (!roomInitialized && familyMode) {
       const entry = urlParams.get('from');
       const start = entry === 'jardim' ? [.92,.46] : entry === 'vila' ? [.5,.85] : [.5,.245];
       player.x = (loaded?.x ?? start[0]) * world.width;
@@ -1187,6 +1193,7 @@
     navigationPath = [];
     navigationTarget = null;
     roomInitialized = true;
+    if(walkMaskReady)villageNavigation?.prepare();
     updateCamera(true);
   }
 
@@ -1221,6 +1228,7 @@
   }
 
   function collides(nextX, nextY) {
+    if (villageMode && villageLife?.collides(nextX,nextY)) return true;
     const mom=story?.motherPosition() || (familyMode ? TobiasFamily.mother : null);
     if (familyMode && Math.hypot((nextX-mom.x*world.width)/(player.radius*1.1),(nextY-mom.y*world.height)/(player.radius*.48))<1) return true;
     return floorCollides(nextX,nextY);
@@ -1247,8 +1255,9 @@
   function nearestWalkablePoint(targetX, targetY) {
     const safeX = clamp(targetX, 0, world.width);
     const safeY = clamp(targetY, 0, world.height);
+    const sameRegion = (x,y) => !villageMode || TobiasVillage.region({x:x/world.width,y:y/world.height}) === TobiasVillage.region({x:player.x/world.width,y:player.y/world.height});
 
-    if (!collides(safeX, safeY)) {
+    if (!collides(safeX, safeY) && sameRegion(safeX,safeY)) {
       return { x: safeX, y: safeY };
     }
 
@@ -1263,7 +1272,7 @@
     let best={x:player.x,y:player.y},distance=Infinity;
     for(const point of safeFloorCache.points){
       const d=(point.x-safeX)**2+(point.y-safeY)**2;
-      if(d<distance&&!collides(point.x,point.y)){distance=d;best=point;}
+      if(d<distance&&sameRegion(point.x,point.y)&&!collides(point.x,point.y)){distance=d;best=point;}
     }
     return {x:best.x,y:best.y};
   }
@@ -1288,6 +1297,7 @@
     if (segmentClear(start, target)) {
       return [target];
     }
+    if(villageNavigation)return villageNavigation.find(start,target);
 
     const cell = Math.max(16, Math.min(32, Math.min(view.width, view.height) * 0.034));
     const cols = Math.ceil(world.width / cell);
@@ -1419,6 +1429,7 @@
   }
 
   function setNavigationTarget(worldX, worldY) {
+    if(villageMode && TobiasVillage.region({x:worldX/world.width,y:worldY/world.height}) !== TobiasVillage.region({x:player.x/world.width,y:player.y/world.height})) return;
     const desired = nearestWalkablePoint(worldX, worldY);
     if(navigationPath.length&&navigationTarget&&Math.hypot(desired.x-navigationTarget.x,desired.y-navigationTarget.y)<player.radius*.18)return;
     navigationTarget = desired;
@@ -1524,10 +1535,11 @@
     if (roomBackgroundReady) {
       // This is the generated HD room artwork, not procedural furniture.
       ctx.drawImage(roomBackground, 0, 0, world.width, world.height);
-      if (!familyMode && knightRug.complete && knightRug.naturalWidth) {
+      if (!familyMode && !villageMode && knightRug.complete && knightRug.naturalWidth) {
         ctx.drawImage(knightRug,340/1024*world.width,754/1536*world.height,369/1024*world.width,351/1536*world.height);
       }
-      if (!familyMode) window.TobiasAtmosphere.draw(ctx, roomBackground, walkMaskImage, world.width, world.height, performance.now()/1000);
+      if (!familyMode && !villageMode) window.TobiasAtmosphere.draw(ctx, roomBackground, walkMaskImage, world.width, world.height, performance.now()/1000);
+      villageLife?.drawAmbient(ctx);
     } else {
       const fallback = ctx.createLinearGradient(0, 0, 0, world.height);
       fallback.addColorStop(0, "#4a3526");
@@ -1554,6 +1566,16 @@
       ctx.restore();
     }
 
+    if(villageLife){
+      const actors=villageLife.actors().map(p=>({x:p.x*world.width,y:p.y*world.height,radius:player.radius,npc:p}));
+      actors.push({...player,npc:null});actors.sort((a,b)=>a.y-b.y);
+      for(const actor of actors){
+        if(actor.x<camera.x-player.radius*10||actor.x>camera.x+view.width+player.radius*10||actor.y<camera.y-player.radius||actor.y>camera.y+view.height+player.radius*10)continue;
+        if(actor.npc)villageLife.drawActor(ctx,actor.npc);else drawPlayer();
+        drawOccludersInFrontOfPlayer(actor);
+      }
+      ctx.restore();return;
+    }
     const mom=story?.motherPosition();
     const motherActor=mom?{x:mom.x*world.width,y:mom.y*world.height,radius:player.radius}:null;
     if (story && player.y >= motherActor.y) {story.draw(ctx);drawOccludersInFrontOfPlayer(motherActor);}
@@ -1600,13 +1622,23 @@
 
   function updateDoorAndTarget(dt) {
     targetPulse = Math.max(0, targetPulse - dt * 0.85);
+    if(villageMode){
+      if(exitTriggered)return;
+      const x=player.x/world.width*1448,y=player.y/world.height*1086;
+      let destination=null;
+      if(x>259&&x<298&&y>560&&y<575)destination='jogo.html?room=casa&from=vila';
+      else if(x>365&&x<379&&y>438&&y<489)destination='jogo.html?room=casa&from=jardim';
+      else if(x>682&&x<742&&y<126)destination='proximo-comodo.html?area=floresta';
+      if(destination){exitTriggered=true;saveRoomState();location.href=destination;}
+      return;
+    }
     if (familyMode) {
       if (exitTriggered) return;
       const x=player.x/world.width,y=player.y/world.height;
       let destination=null;
       if(x>.452&&x<.55&&y<.12) destination='jogo.html?from=casa';
-      else if(x>.969&&y>.365&&y<.517) destination='proximo-comodo.html?area=jardim';
-      else if(x>.45&&x<.555&&y>.954) destination='proximo-comodo.html?area=vila';
+      else if(x>.969&&y>.365&&y<.517) destination='jogo.html?room=vila&from=jardim';
+      else if(x>.45&&x<.555&&y>.954) destination='jogo.html?room=vila&from=casa';
       if(destination){exitTriggered=true;saveRoomState();location.href=destination;}
       return;
     }
@@ -1642,6 +1674,7 @@
     if (!force && lastHeldTarget && Math.hypot(worldX-lastHeldTarget.x,worldY-lastHeldTarget.y)<Math.max(3,player.radius*.12)) return;
     lastHeldTarget={x:worldX,y:worldY};
     story?.cancelPending();
+    villageLife?.cancelPending();
     setNavigationTarget(worldX, worldY);
   }
   function releaseHold(stop=true) {
@@ -1663,13 +1696,16 @@
   window.addEventListener('blur',()=>releaseHold());
   document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseHold();});
   roomCanvas.addEventListener('contextmenu',event=>event.preventDefault());
-  const story = familyMode && !constructionMode ? TobiasStory.create({stage:gameplayStage,
+  const actorApi = {stage:gameplayStage,
     state:()=>({player,world,view,camera}),navigate:setNavigationTarget,stop:()=>{releaseHold();hop.active=false;},
     audio:()=>audio,blocked:anyBlockingOverlayOpen,ready:()=>walkMaskReady&&roomBackgroundReady,
     canWalk:(a,b)=>segmentClear(a,b,floorCollides),
     face:target=>{const dx=target.x-player.x,dy=target.y-player.y;player.facing=Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down');}
-  }) : null;
-  window.TobiasHD={state:()=>({room:familyMode?'casa':'quarto',mother:story?.state(),player:{...player},hop:{...hop},world:{...world},view:{...view},camera:{...camera},held:!!heldPointer,path:navigationPath.length,ready:walkMaskReady&&playerSpriteReady&&roomBackgroundReady}),collides,floorCollides,navigate:setNavigationTarget};
+  };
+  const story = familyMode && !constructionMode ? TobiasStory.create(actorApi) : null;
+  const villageLife = villageMode && !constructionMode ? TobiasVillageLife.create(actorApi) : null;
+  const villageNavigation = villageMode && !constructionMode ? TobiasVillageNavigation.create({state:()=>({world,player}),floorCollides,segmentClear,actors:()=>villageLife.actors()}) : null;
+  window.TobiasHD={state:()=>({room:villageMode?'vila':familyMode?'casa':'quarto',mother:story?.state(),village:villageLife?.state(),player:{...player},hop:{...hop},world:{...world},view:{...view},camera:{...camera},held:!!heldPointer,path:navigationPath.length,ready:walkMaskReady&&playerSpriteReady&&roomBackgroundReady}),collides,floorCollides,navigate:setNavigationTarget};
 
   function gameLoop(timestamp) {
     if (!lastTimestamp) lastTimestamp = timestamp;
@@ -1683,6 +1719,7 @@
 
     updateCamera(false,dt);
     story?.update(dt);
+    villageLife?.update(dt);
     renderRoom();
     requestAnimationFrame(gameLoop);
   }

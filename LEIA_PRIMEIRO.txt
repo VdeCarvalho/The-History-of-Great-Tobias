@@ -1,24 +1,34 @@
-TOBIAS - JOGO COMPLETO - SALA E COZINHA VIVAS
+TOBIAS - JOGO COMPLETO - VILA VIVA
 
-Pacote completo: abertura, quarto do Tobias, sala/cozinha, imagens, musica,
-sons, menus e progresso. Publique o conteudo desta pasta na raiz do site.
-Pagina inicial: index.html. Nada foi publicado automaticamente no GitHub.
+Este pacote inclui a abertura, o quarto, a sala/cozinha, a vila, todas as
+artes e sons utilizados, menus e sistema de progresso. Nao e um patch.
+Pagina inicial: index.html. Publique o conteudo desta pasta na raiz do site.
+Nada foi enviado automaticamente para o GitHub.
 
-NESTA REVISAO
-- Cama e criado-mudo removidos da sala; aparador com loucas no lugar.
-- Centro com tapete floral, mesa de costura, cesta, banco e bancada culinaria.
-- Mascara de colisao atualizada; passagens do quarto, jardim e vila preservadas.
-- Respiracao suave de Tobias e da mae em todas as direcoes, com pes ancorados.
-- Mae passeia em trajetos curtos e variados, com pausas e animacao de caminhada.
-- Mae respeita os moveis e cede passagem a Tobias, sem empurra-lo.
-- Ao clicar nela, para e espera Tobias; ambos se voltam para a conversa.
-- Sons vocais sintetizados mais presentes, um por letra, com timbres diferentes.
-- Volume e silencio seguem as configuracoes de efeitos sonoros.
-- Cliques durante a escrita continuam sem pular ou completar as falas.
+NESTA VERSAO
+- Vila de 4096 x 3072 unidades: quatro vezes a area da sala/cozinha.
+- Casas coloridas, praca com fonte animada, feira, oficina, banco,
+  caixas de cenouras, gramado da pipa e arvores cercando o mapa.
+- Dez moradores com artes, nomes, retratos e conversas diferentes.
+- Caminhadas com pausas, respiracao e gestos de cada ocupacao.
+- Entregador transportando cenouras, feirante com frutas, magnata
+  olhando o relogio, marceneiro limpando a testa e crianca com pipa.
+- Cachorro junto ao hidrante, com animacao e conversa "au au".
+- Jardim da casa fechado por cerca branca, contendo apenas o porquinho.
+- Porta inferior da sala leva a rua; porta direita leva ao jardim.
+  Ambos pertencem ao mesmo mapa. Nao ha passagem da rua para o jardim.
+- Retorno a casa pelas duas portas e entrada sombria ao norte com teias.
+- Alem da entrada norte, a floresta ainda esta em construcao; ha retorno
+  funcional para a vila. As demais casas sao cenario, sem interiores.
+- Dialogos com retrato e som vocal sintetizado por letra. O clique so
+  avanca depois da frase completa. Volume segue os efeitos sonoros.
+- Navegacao da vila com PathFinding.js local e grade de colisao em cache.
 
-Continuam incluidos o dialogo da mae, a panela interativa, os retratos,
-a roupa basica do Tobias, a musica cozy e sua velocidade 50% maior.
-Jardim e vila continuam sendo telas em construcao com retorno funcional.
-Nao e necessario apagar o progresso existente.
+MANTIDO
+Musica cozy, velocidade de Tobias 50% maior, roupa basica, dialogo da mae,
+panela interativa, sala sem cama, mobiliario central e passeio da mae.
+Nao e preciso apagar o progresso. Cada ambiente guarda sua posicao.
 
-Verificacoes em navegador desktop e celular emulado, nao em aparelho fisico.
+Testado no Microsoft Edge desktop e em viewport/touch de celular emulado.
+As artes e prompts desta vila estao documentados em VILLAGE_ARTS.txt.
+Bibliotecas locais: PATHFINDING_LICENSE.txt e HEAP_LICENSE.txt.
