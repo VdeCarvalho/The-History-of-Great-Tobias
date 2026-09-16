@@ -284,13 +284,13 @@
     return (
       backend.mode === "supabase" &&
       Boolean(backend.supabaseUrl) &&
-      Boolean(backendPublicKey()) &&
-      Boolean(window.supabase?.createClient)
+      Boolean(backendPublicKey())
     );
   }
 
   function getRealtimeClient() {
     if (!chatUsesGlobalBackend()) return null;
+    if (!window.supabase?.createClient) throw new Error('Cliente do chat indisponível. Atualize a página.');
     if (!realtimeClient) {
       realtimeClient = window.supabase.createClient(backend.supabaseUrl, backendPublicKey(), {
         realtime: { params: { eventsPerSecond: 20 } }
@@ -440,6 +440,7 @@
   async function reconcileChatMessages() {
     if (!chatPanel.classList.contains("open")) return;
     try {
+      if(chatUsesGlobalBackend() && (!realtimeChannel || realtimeChannel.state==='closed')) await connectRealtimeChat();
       const latest = await fetchChatMessages();
       currentChatMessages = latest.slice(-1000);
       renderChat(currentChatMessages, false);
@@ -498,6 +499,7 @@
         if (status === "SUBSCRIBED") {
           chatStatus.textContent = "GLOBAL · TEMPO REAL";
           chatStatus.classList.remove("error");
+          reconcileChatMessages();
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           chatStatus.textContent = "ERRO NA CONEXÃO";
           chatStatus.classList.add("error");
@@ -507,17 +509,15 @@
 
   async function openChat() {
     showPanel(chatPanel);
+    try { await connectRealtimeChat(); } catch(error) { console.warn('Chat connection failed:',error); }
     try {
       currentChatMessages = await fetchChatMessages();
       renderChat(currentChatMessages, true);
-      try {
-        await connectRealtimeChat();
-      } catch (realtimeError) {
-        console.warn("Realtime connection failed:", realtimeError);
-      }
       startChatRecovery();
     } catch (error) {
       console.error("Initial chat load failed:", error);
+      chatStatus.textContent = 'CHAT INDISPONÍVEL · TENTANDO RECONECTAR';
+      chatStatus.classList.add('error');
       currentChatMessages = [];
       renderChat(currentChatMessages, true);
       startChatRecovery();
@@ -577,6 +577,8 @@
   }
 
   chatToggle.addEventListener("click", openChat);
+  window.addEventListener('online',()=>{if(chatPanel.classList.contains('open'))openChat();});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&chatPanel.classList.contains('open'))reconcileChatMessages();});
 
   closeChat.addEventListener("click", async () => {
     if (document.activeElement === chatInput) chatInput.blur();
@@ -610,6 +612,8 @@
       if (keyboardWasOpen) chatInput.focus();
     } catch (error) {
       console.error("Não foi possível enviar a mensagem.", error);
+      chatStatus.textContent = 'MENSAGEM NÃO ENVIADA · TENTE NOVAMENTE';
+      chatStatus.classList.add('error');
     } finally {
       chatSend.disabled = false;
     }
@@ -982,14 +986,14 @@
   // QUARTO DO TOBIAS — CENÁRIO HD + POINT-AND-CLICK
   // ----------------------------------------------------------
   const ctx = roomCanvas.getContext("2d");
-  const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  let DPR = 1;
   const ROOM_IMAGE_WIDTH = villageMode ? 4096 : familyMode ? 2048 : 1024;
   const ROOM_IMAGE_HEIGHT = villageMode ? 3072 : 1536;
   const ROOM_IMAGE_RATIO = ROOM_IMAGE_WIDTH / ROOM_IMAGE_HEIGHT;
 
   const roomBackground = new Image();
   roomBackground.decoding = "async";
-  roomBackground.src = villageMode ? TobiasVillage.background : familyMode ? TobiasFamily.background : "quarto_tobias_hd.png";
+  roomBackground.src = villageMode ? TobiasVillage.background : familyMode ? TobiasFamily.background : "quarto-tobias.webp";
   let roomBackgroundReady = false;
   roomBackground.addEventListener("load", () => {
     roomBackgroundReady = true;
@@ -1126,6 +1130,9 @@
 
     view.width = Math.max(320, rect.width || 1170);
     view.height = Math.max(540, rect.height || 1890);
+
+    // Full-HD-long-edge backing store, capped for mobile memory and fill rate.
+    DPR = Math.max(1, Math.min(3, Math.max(window.devicePixelRatio || 1, 1920 / Math.max(view.width,view.height))));
 
     roomCanvas.width = Math.round(view.width * DPR);
     roomCanvas.height = Math.round(view.height * DPR);
@@ -1279,7 +1286,7 @@
 
   function segmentClear(a, b, blocked=collides) {
     const distance = Math.hypot(b.x - a.x, b.y - a.y);
-    const steps = Math.max(1, Math.ceil(distance / Math.max(2, world.width / walkMaskWidth * 2)));
+    const steps = Math.max(1, Math.ceil(distance / Math.max(.25, world.width / walkMaskWidth * .5)));
 
     for (let i = 1; i <= steps; i++) {
       const t = i / steps;
@@ -1534,6 +1541,7 @@
 
     if (roomBackgroundReady) {
       // This is the generated HD room artwork, not procedural furniture.
+      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(roomBackground, 0, 0, world.width, world.height);
       if (!familyMode && !villageMode && knightRug.complete && knightRug.naturalWidth) {
         ctx.drawImage(knightRug,340/1024*world.width,754/1536*world.height,369/1024*world.width,351/1536*world.height);

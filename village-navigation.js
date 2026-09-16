@@ -16,19 +16,24 @@ window.TobiasVillageNavigation = (() => {
         }
       }
       const node=p=>[Math.max(0,Math.min(cols-1,Math.floor(p.x/cell))),Math.max(0,Math.min(rows-1,Math.floor(p.y/cell)))];
-      const [sx,sy]=node(start);let [tx,ty]=node(target);
-      if(!grid.isWalkableAt(tx,ty)){
-        let best=null,d=Infinity;for(let y=Math.max(0,ty-3);y<=Math.min(rows-1,ty+3);y++)for(let x=Math.max(0,tx-3);x<=Math.min(cols-1,tx+3);x++){
-          const p={x:(x+.5)*cell,y:(y+.5)*cell},score=Math.hypot(p.x-target.x,p.y-target.y);
-          if(score<d&&grid.isWalkableAt(x,y)&&api.segmentClear(p,target)){best=[x,y];d=score;}
-        }if(!best)return [];[tx,ty]=best;
+      // Connect exact feet positions to reachable grid centers without opening obstacles.
+      function connectedNode(point){
+        const [cx,cy]=node(point);let best=null,d=Infinity;
+        for(let y=Math.max(0,cy-3);y<=Math.min(rows-1,cy+3);y++)for(let x=Math.max(0,cx-3);x<=Math.min(cols-1,cx+3);x++){
+          const p={x:(x+.5)*cell,y:(y+.5)*cell},score=Math.hypot(p.x-point.x,p.y-point.y);
+          if(score<d&&grid.isWalkableAt(x,y)&&api.segmentClear(point,p)){best=[x,y];d=score;}
+        }return best;
       }
-      grid.setWalkableAt(sx,sy,true);
+      const source=connectedNode(start),destination=connectedNode(target);
+      if(!source||!destination)return [];
+      const [sx,sy]=source,[tx,ty]=destination;
       const path=new PF.AStarFinder({diagonalMovement:PF.DiagonalMovement.OnlyWhenNoObstacles}).findPath(sx,sy,tx,ty,grid);
       if(!path.length)return [];
-      const raw=path.slice(1).map(([x,y])=>({x:(x+.5)*cell,y:(y+.5)*cell}));raw.push(target);
+      const raw=path.map(([x,y])=>({x:(x+.5)*cell,y:(y+.5)*cell}));raw.push(target);
       const result=[];let anchor=start,i=0;
-      while(i<raw.length){let furthest=-1;for(let j=raw.length-1;j>=i;j--)if(api.segmentClear(anchor,raw[j])){furthest=j;break;}
+      while(i<raw.length){let furthest=-1,step=1,j=i;
+        while(j<raw.length&&api.segmentClear(anchor,raw[j])){furthest=j;if(j===raw.length-1)break;j=Math.min(raw.length-1,i+step);step*=2;}
+        if(furthest>=0&&j>furthest){let low=furthest+1,high=j-1;while(low<=high){const mid=(low+high)>>1;if(api.segmentClear(anchor,raw[mid])){furthest=mid;low=mid+1;}else high=mid-1;}}
         if(furthest<0)return [];result.push(raw[furthest]);anchor=raw[furthest];i=furthest+1;
       }return result;
     }

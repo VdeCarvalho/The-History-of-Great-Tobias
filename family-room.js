@@ -1,6 +1,6 @@
 window.TobiasFamily = {
   width: 2048, height: 1536,
-  background: 'living_kitchen.png', mask: 'living_walkable.png',
+  background: 'living-kitchen.webp', mask: 'living_walkable.png',
   mother: { x: .57, y: .40 },
   pot: { x: 1007/1448, y: 132/1086, approachX: 1007/1448, approachY: .25 },
   // Source rectangles include the furniture above its footprint for foreground depth.
